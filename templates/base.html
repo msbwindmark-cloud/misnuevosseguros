@@ -72,6 +72,17 @@
                             <i class="fas fa-database"></i> Backup
                         </a>
                     </li>
+                    {% if user.is_superuser %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-code"></i> API
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'swagger_ui' %}" target="_blank"><i class="fas fa-book me-1"></i> Swagger UI</a></li>
+                            <li><a class="dropdown-item" href="{% url 'swagger_api_schema' %}?format=json" target="_blank"><i class="fas fa-file-code me-1"></i> Schema JSON</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-file-invoice-dollar"></i> Facturación
@@ -138,6 +149,10 @@
                             <li class="px-3 py-1"><i class="fas fa-sun text-warning"></i> Asr: <span id="salat-asr">—</span></li>
                             <li class="px-3 py-1"><i class="fas fa-sun text-warning"></i> Maghrib: <span id="salat-maghrib">—</span></li>
                             <li class="px-3 py-1"><i class="fas fa-moon text-secondary"></i> Isha: <span id="salat-isha">—</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li class="px-3 py-1" id="salat-temp-row" style="display:none;">
+                                <i class="fas fa-temperature-half text-info"></i> Température: <span id="salat-temperature">—</span>
+                            </li>
                         </ul>
                     </li>
                     <li class="nav-item">
@@ -191,7 +206,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/min/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/moment-hijri@2.1.2/moment-hijri.min.js"></script>
-    <script src="{% static 'js/main.js' %}?v=20260709g"></script>
+    <script src="{% static 'js/main.js' %}?v=20260711d"></script>
     <script>
     // Sticky navbar shadow
     document.addEventListener('DOMContentLoaded', function() {

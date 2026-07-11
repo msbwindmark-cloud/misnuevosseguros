@@ -1,5 +1,5 @@
 from django.urls import reverse_lazy
-from django.views.generic import ListView, CreateView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.contrib import messages
 from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
@@ -20,6 +20,23 @@ class TipoDocumentoCreateView(CreateView):
     form_class = TipoDocumentoForm
     template_name = 'documentos/tipos_form.html'
     success_url = reverse_lazy('tipo_documento_list')
+
+
+class TipoDocumentoUpdateView(UpdateView):
+    model = TipoDocumento
+    form_class = TipoDocumentoForm
+    template_name = 'documentos/tipos_form.html'
+    success_url = reverse_lazy('tipo_documento_list')
+
+
+class TipoDocumentoDeleteView(DeleteView):
+    model = TipoDocumento
+    template_name = 'documentos/tipos_confirm_delete.html'
+    success_url = reverse_lazy('tipo_documento_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Tipo de documento "{self.object}" eliminado correctamente.')
+        return super().form_valid(form)
 
 
 @staff_member_required

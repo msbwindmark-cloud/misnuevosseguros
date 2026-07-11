@@ -73,6 +73,10 @@ $(document).ready(function() {
         var nombreEl = document.getElementById('salat-ciudad-nombre');
         var key = ciudad + '|' + pais;
         if (nombreEl) nombreEl.textContent = (salatCiudades[key] || {}).nombre || ciudad;
+        var tempRow = document.getElementById('salat-temp-row');
+        var tempEl = document.getElementById('salat-temperature');
+        if (tempRow) tempRow.style.display = 'none';
+        if (tempEl) tempEl.textContent = '...';
         var hoy = new Date();
         var y = hoy.getFullYear();
         var m = ('0' + (hoy.getMonth() + 1)).slice(-2);
@@ -94,9 +98,52 @@ $(document).ready(function() {
                         if (hhmm) salatTimings[k] = hhmm[1] + ':' + hhmm[2];
                     });
                     comprobarSalat();
+                    cargarTemperatura(ciudad, pais);
                 }
             })
             .catch(function() {});
+    }
+
+    function cargarTemperatura(ciudad, pais) {
+        var tempRow = document.getElementById('salat-temp-row');
+        var tempEl = document.getElementById('salat-temperature');
+        if (!tempRow || !tempEl) return;
+        tempEl.textContent = '...';
+        tempRow.style.display = '';
+        var geoUrl = 'https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(ciudad) + '&count=1&language=es&format=json';
+        fetch(geoUrl)
+            .then(function(r) { return r.json(); })
+            .then(function(geo) {
+                if (!geo.results || geo.results.length === 0) { tempRow.style.display = 'none'; return; }
+                var lat = geo.results[0].latitude;
+                var lon = geo.results[0].longitude;
+                var weatherUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,weather_code&timezone=auto';
+                return fetch(weatherUrl);
+            })
+            .then(function(r) { return r ? r.json() : null; })
+            .then(function(data) {
+                if (data && data.current) {
+                    var temp = data.current.temperature_2m;
+                    var code = data.current.weather_code;
+                    var icono = temperaturaIcono(code);
+                    tempEl.textContent = icono + ' ' + temp + ' \u00B0C';
+                    tempRow.style.display = '';
+                } else {
+                    tempRow.style.display = 'none';
+                }
+            })
+            .catch(function() { tempRow.style.display = 'none'; });
+    }
+
+    function temperaturaIcono(code) {
+        if (code === 0) return '\u2600\uFE0F';
+        if (code <= 3) return '\u26C5';
+        if (code <= 49) return '\uD83C\uDF2B\uFE0F';
+        if (code <= 69) return '\uD83C\uDF27\uFE0F';
+        if (code <= 79) return '\u2744\uFE0F';
+        if (code <= 82) return '\uD83C\uDF27\uFE0F';
+        if (code <= 99) return '\u26A1';
+        return '\uD83C\uDF24\uFE0F';
     }
 
     function notificarSalat(clave, icon, titulo) {
@@ -114,6 +161,62 @@ $(document).ready(function() {
     }
     window.notificarSalat = notificarSalat;
 
+    var adhanAudioCtx = null;
+    var adhanSonando = false;
+
+    function reproducirAdhan() {
+        if (adhanSonando) return;
+        try {
+            if (!adhanAudioCtx) adhanAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (adhanAudioCtx.state === 'suspended') adhanAudioCtx.resume();
+            adhanSonando = true;
+            var ctx = adhanAudioCtx;
+            var now = ctx.currentTime;
+            var duracion = 30;
+            var masterGain = ctx.createGain();
+            masterGain.gain.setValueAtTime(0, now);
+            masterGain.gain.linearRampToValueAtTime(0.3, now + 1);
+            masterGain.gain.setValueAtTime(0.3, now + duracion - 2);
+            masterGain.gain.linearRampToValueAtTime(0, now + duracion);
+            masterGain.connect(ctx.destination);
+            var notas = [
+                { f: 392, t: 0, d: 2 },
+                { f: 440, t: 2, d: 1.5 },
+                { f: 523, t: 3.5, d: 2.5 },
+                { f: 440, t: 6, d: 1.5 },
+                { f: 523, t: 7.5, d: 3 },
+                { f: 587, t: 11, d: 2 },
+                { f: 523, t: 13, d: 1.5 },
+                { f: 440, t: 14.5, d: 2 },
+                { f: 392, t: 16.5, d: 1.5 },
+                { f: 440, t: 18, d: 2.5 },
+                { f: 523, t: 20.5, d: 2 },
+                { f: 587, t: 22.5, d: 1.5 },
+                { f: 523, t: 24, d: 2 },
+                { f: 440, t: 26, d: 2 },
+                { f: 392, t: 28, d: 2 },
+            ];
+            notas.forEach(function(n) {
+                var osc = ctx.createOscillator();
+                var env = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(n.f, now + n.t);
+                env.gain.setValueAtTime(0, now + n.t);
+                env.gain.linearRampToValueAtTime(0.35, now + n.t + 0.15);
+                env.gain.setValueAtTime(0.35, now + n.t + n.d - 0.3);
+                env.gain.linearRampToValueAtTime(0, now + n.t + n.d);
+                osc.connect(env);
+                env.connect(masterGain);
+                osc.start(now + n.t);
+                osc.stop(now + n.t + n.d);
+            });
+            setTimeout(function() { adhanSonando = false; }, duracion * 1000 + 500);
+        } catch (e) {
+            adhanSonando = false;
+        }
+    }
+    window.reproducirAdhan = reproducirAdhan;
+
     function comprobarSalat() {
         if (!salatTimings || Object.keys(salatTimings).length === 0) return;
         var now = new Date();
@@ -127,13 +230,16 @@ $(document).ready(function() {
             var nombre = k;
             var horaSalat = salatTimings[k];
             var fechaBonita = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            var ciudadNombre = document.getElementById('salat-ciudad-nombre');
+            var ciudadTexto = ciudadNombre ? ' — ' + ciudadNombre.textContent : '';
             if (diff >= 0 && diff <= SALAT_AVISO_MIN) {
                 notificarSalat(fechaKey + '|' + k + '|aviso', 'warning',
-                    fechaBonita + ' — Salat ' + nombre + ' a las ' + horaSalat + ' (en ' + diff + ' min)');
+                    fechaBonita + ' — Salat ' + nombre + ' a las ' + horaSalat + ' (en ' + diff + ' min)' + ciudadTexto);
             }
             if (diff >= -1 && diff <= 0) {
                 notificarSalat(fechaKey + '|' + k + '|hora', 'info',
-                    fechaBonita + ' — Es la hora de la Salat ' + nombre + ' (' + horaSalat + ')');
+                    fechaBonita + ' — Es la hora de la Salat ' + nombre + ' (' + horaSalat + ')' + ciudadTexto);
+                reproducirAdhan();
             }
         });
     }
@@ -146,7 +252,7 @@ $(document).ready(function() {
             url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json'
         },
         lengthMenu: [5, 10, 25, 50, 100],
-        pageLength: 25,
+        pageLength: 5,
         responsive: true,
         order: [[0, 'desc']]
     });

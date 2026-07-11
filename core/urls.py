@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from swagger_manual import swagger_api_schema as _swagger_schema, swagger_ui_view as _swagger_ui
 
 urlpatterns = [
     path('exportar/polizas/pdf/', views.export_polizas_pdf, name='export_polizas_pdf'),
@@ -17,4 +18,6 @@ urlpatterns = [
     path('check-expiring/', views.check_expiring_ajax, name='check_expiring_ajax'),
     path('escanear-qr/', views.escanear_qr, name='escanear_qr'),
     path('api/ciudades-salat/', views.ciudades_salat_api, name='ciudades_salat_api'),
+    path('api/schema/', _swagger_schema, name='swagger_api_schema'),
+    path('swagger/', _swagger_ui, name='swagger_ui'),
 ]

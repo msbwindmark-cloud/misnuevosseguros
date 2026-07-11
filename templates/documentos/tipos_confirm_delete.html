@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar Tipo de Documento - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h4>
+            </div>
+            <div class="card-body">
+                <p>¿Estás seguro de eliminar el tipo de documento <strong>{{ object.tipo_documento }}</strong>?</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Eliminar</button>
+                        <a href="{% url 'tipo_documento_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

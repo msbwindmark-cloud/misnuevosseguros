@@ -10,7 +10,7 @@
         <div class="table-responsive">
             <table class="table table-hover datatable">
                 <thead>
-                    <tr><th>ID</th><th>Tipo de Documento</th><th>Creado</th></tr>
+                    <tr><th>ID</th><th>Tipo de Documento</th><th>Creado</th><th>Acción</th></tr>
                 </thead>
                 <tbody>
                     {% for t in tipos %}
@@ -18,9 +18,15 @@
                         <td>{{ t.id }}</td>
                         <td>{{ t.tipo_documento }}</td>
                         <td>{{ t.creado_el|date:"d/m/Y" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'tipo_documento_update' t.pk %}" class="btn btn-warning" title="Editar"><i class="fas fa-edit"></i></a>
+                                <a href="{% url 'tipo_documento_delete' t.pk %}" class="btn btn-danger" title="Eliminar"><i class="fas fa-trash"></i></a>
+                            </div>
+                        </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="3" class="text-center">No hay tipos de documento</td></tr>
+                    <tr><td colspan="4" class="text-center">No hay tipos de documento</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
