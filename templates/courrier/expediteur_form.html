@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}Editar{% else %}Nuevo{% endif %} Remitente - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <h4 class="mb-0"><i class="fas fa-user"></i> {% if object %}Editar{% else %}Nuevo{% endif %} Remitente</h4>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Nombre</label>
+                <input type="text" name="nom_expediteur" class="form-control" value="{{ form.nom_expediteur.value|default:'' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Dirección</label>
+                <textarea name="adresse_expediteur" class="form-control" rows="3">{{ form.adresse_expediteur.value|default:'' }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+            <a href="{% url 'expediteur_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

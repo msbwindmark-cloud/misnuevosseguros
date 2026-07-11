@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}Editar{% else %}Nuevo{% endif %} Envío - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <h4 class="mb-0"><i class="fas fa-envelope"></i> {% if object %}Editar{% else %}Nuevo{% endif %} Envío de Correo</h4>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Fecha de envío</label>
+                <input type="date" name="date_envoie_courrier" class="form-control" value="{{ form.date_envoie_courrier.value|date:'Y-m-d'|default:'' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Remitente</label>
+                <input type="text" name="expediteur_envoie_courrier" class="form-control" value="{{ form.expediteur_envoie_courrier.value|default:'' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Destinatario</label>
+                <input type="text" name="destinataire_envoie_courrier" class="form-control" value="{{ form.destinataire_envoie_courrier.value|default:'' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Dirección</label>
+                <textarea name="addresse_envoie_courrier" class="form-control" rows="3" required>{{ form.addresse_envoie_courrier.value|default:'' }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Tipo de documento</label>
+                <input type="text" name="tipo_documento_envoie_courrier" class="form-control" value="{{ form.tipo_documento_envoie_courrier.value|default:'' }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Nombre del documento</label>
+                <input type="text" name="nombre_documento_envoie_courrier" class="form-control" value="{{ form.nombre_documento_envoie_courrier.value|default:'' }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Tamaño del documento (bytes)</label>
+                <input type="number" name="tamanio_documento_envoie_courrier" class="form-control" value="{{ form.tamanio_documento_envoie_courrier.value|default:'' }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Archivo</label>
+                <input type="file" name="archivo" class="form-control">
+                {% if object and object.archivo %}<small class="text-muted">Archivo actual: {{ object.archivo.name }}</small>{% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+            <a href="{% url 'courrier_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

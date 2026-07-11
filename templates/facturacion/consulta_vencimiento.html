@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Consulta por Vencimiento - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <h4 class="mb-0"><i class="fas fa-calendar-alt"></i> Consulta por Vencimiento</h4>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3 mb-4">
+            <div class="col-md-4">
+                <label for="fecha_desde" class="form-label">Fecha Desde</label>
+                <input type="date" class="form-control" id="fecha_desde" name="fecha_desde" value="{{ fecha_desde }}">
+            </div>
+            <div class="col-md-4">
+                <label for="fecha_hasta" class="form-label">Fecha Hasta</label>
+                <input type="date" class="form-control" id="fecha_hasta" name="fecha_hasta" value="{{ fecha_hasta }}">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2"><i class="fas fa-search"></i> Buscar</button>
+                {% if resultados is not None %}
+                <a href="?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}&export_excel=1" class="btn btn-success"><i class="fas fa-file-excel"></i> Exportar Excel</a>
+                {% endif %}
+            </div>
+        </form>
+
+        {% if resultados is not None %}
+        <hr>
+        <p class="text-muted">{{ resultados|length }} resultado(s) encontrado(s).</p>
+        <div class="table-responsive">
+            <table class="table table-hover datatable">
+                <thead>
+                    <tr>
+                        <th>Recibo</th>
+                        <th>Asegurado</th>
+                        <th>Póliza</th>
+                        <th>Desde</th>
+                        <th>Hasta</th>
+                        <th>Teléfono</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in resultados %}
+                    <tr>
+                        <td><a href="{% url 'poliza_detail' p.recu %}">{{ p.recu }}</a></td>
+                        <td>{{ p.assure }}</td>
+                        <td>{{ p.police }}</td>
+                        <td>{{ p.du|date:"d/m/Y" }}</td>
+                        <td>{{ p.au|date:"d/m/Y" }}</td>
+                        <td>{{ p.telefono }}</td>
+                        <td>{{ p.email }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center">No se encontraron resultados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

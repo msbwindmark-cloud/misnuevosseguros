@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Envíos Bancarios - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-exchange-alt"></i> Lista de Envíos Bancarios</h4>
+        <div>
+            <a href="{% url 'envio_banco_list_pdf' %}" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF Lista</a>
+            <a href="{% url 'export_envios_banco_excel' %}" class="btn btn-info btn-sm"><i class="fas fa-file-excel"></i> Excel</a>
+            <a href="{% url 'envio_banco_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nuevo Envío</a>
+            <a href="{% url 'poliza_create' %}" class="btn btn-light btn-sm"><i class="fas fa-arrow-left"></i> Formulaire</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover datatable">
+                <thead>
+                    <tr><th>ID</th><th>Nombre</th><th>Banco</th><th>Cuenta</th><th>Fecha</th><th>Monto</th><th>Acciones</th></tr>
+                </thead>
+                <tbody>
+                    {% for e in envios %}
+                    <tr>
+                        <td>{{ e.id }}</td>
+                        <td>{{ e.nom_envoie }}</td>
+                        <td>{{ e.banque_envoie }}</td>
+                        <td>{{ e.compte_envoie }}</td>
+                        <td>{{ e.date_envoie|date:"d/m/Y" }}</td>
+                        <td>{{ e.montant_envoie }} MAD</td>
+                        <td>
+                            <a href="{% url 'envio_banco_update' e.pk %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Editar</a>
+                            <a href="{% url 'envio_banco_delete' e.pk %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Eliminar</a>
+                            <a href="{% url 'envio_banco_pdf' e.pk %}" class="btn btn-outline-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center">No hay envíos</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

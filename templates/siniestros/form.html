@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo Siniestro - Proyecto SIS{% endblock %}
+{% block content %}
+<form method="post" id="formSiniestro" enctype="multipart/form-data">
+{% csrf_token %}
+<input type="hidden" name="id_recu" id="id_recu" value="{{ val.id_recu }}">
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Nuevo Siniestro</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3"><label>Code Sinistre:</label><input type="text" class="form-control" name="code_sinistre" value="{{ val.code_sinistre }}"></div>
+            <div class="col-md-3"><label>Réf Sinistre:</label><input type="text" class="form-control" name="ref_sinistre" value="{{ val.ref_sinistre }}"></div>
+            <div class="col-md-2"><label>Cod correcto:</label><select class="form-select" name="cod_sig_correcto"><option value="0"{% if val.cod_sig_correcto == '0' %} selected{% endif %}>No</option><option value="1"{% if val.cod_sig_correcto == '1' %} selected{% endif %}>Sí</option></select></div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-4"><label>Date Opération:</label><input type="date" class="form-control" name="date_operation" value="{{ val.date_operation }}"></div>
+            <div class="col-md-4"><label>Date Sinistre:</label><input type="date" class="form-control" name="date_sinistre" value="{{ val.date_sinistre }}"></div>
+            <div class="col-md-4"><label>Date Réception:</label><input type="date" class="form-control" name="date_reception" value="{{ val.date_reception }}"></div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <label>Police:</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" name="police" id="id_police" value="{{ val.police }}" readonly>
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalPolizas"><i class="fas fa-search"></i></button>
+                    <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalDocsPoliza"><i class="fas fa-file"></i> Docs</button>
+                </div>
+            </div>
+            <div class="col-md-3"><label>Assuré:</label><input type="text" class="form-control" name="assure" id="id_assure" value="{{ val.assure }}" readonly></div>
+            <div class="col-md-3"><label>Catégorie:</label><input type="text" class="form-control" name="categorie_assurance" value="{{ val.categorie_assurance }}"></div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <label>Réf. Assurance:</label>
+                <select class="form-select" name="reference_assurance">
+                    <option value="ATLANTASANAD"{% if val.reference_assurance == 'ATLANTASANAD' %} selected{% endif %}>ATLANTASANAD</option>
+                    <option value="ATLANTA"{% if val.reference_assurance == 'ATLANTA' %} selected{% endif %}>ATLANTA</option>
+                    <option value="SANAD"{% if val.reference_assurance == 'SANAD' %} selected{% endif %}>SANAD</option>
+                </select>
+            </div>
+            <div class="col-md-4"><label>Bénéficiaire:</label><input type="text" class="form-control" name="benificiaire" value="{{ val.benificiaire }}"></div>
+            <div class="col-md-4"><label>Réf. Assistance:</label><input type="text" class="form-control" name="reference_assistance" value="{{ val.reference_assistance }}"></div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-3">
+                <label>Formule:</label>
+                <select class="form-select" name="nom_formule">
+                    <option value="">Seleccioner...</option>
+                    {% for f in formules %}<option value="{{ f.nom_formule }}"{% if val.nom_formule == f.nom_formule %} selected{% endif %}>{{ f.nom_formule }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Expert:</label>
+                <select class="form-select" name="nom_expert">
+                    <option value="">Seleccioner...</option>
+                    {% for e in expertos %}<option value="{{ e.nom_expert }}"{% if val.nom_expert == e.nom_expert %} selected{% endif %}>{{ e.nom_expert }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Réf. Réglement:</label>
+                <select class="form-select" name="reference_reglement">
+                    <option value="">Seleccioner...</option>
+                    {% for r in referencias_reg %}<option value="{{ r.nom_reference_reglement }}"{% if val.reference_reglement == r.nom_reference_reglement %} selected{% endif %}>{{ r.nom_reference_reglement }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Document de Base:</label>
+                <select class="form-select" name="document_de_base">
+                    <option value="">Seleccioner...</option>
+                    {% for d in documentos_base %}<option value="{{ d.nom_document_de_base }}"{% if val.document_de_base == d.nom_document_de_base %} selected{% endif %}>{{ d.nom_document_de_base }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <hr>
+        <h5>Paiement</h5>
+        <div class="row">
+            <div class="col-md-3"><label>Montant:</label><input type="number" step="0.01" class="form-control" name="montant" value="{{ val.montant }}"></div>
+            <div class="col-md-3"><label>Réf. Paiement:</label><input type="text" class="form-control" name="reference_payement" value="{{ val.reference_payement }}" placeholder="CHQ N..."></div>
+            <div class="col-md-3"><label>Date Paiement:</label><input type="date" class="form-control" name="date_payement" value="{{ val.date_payement }}"></div>
+        </div>
+    </div>
+    <div class="card-footer d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Siniestro</button>
+        <a href="{% url 'sinistro_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+        <a href="{% url 'poliza_create' %}" class="btn btn-info ms-auto"><i class="fas fa-arrow-left"></i> Formulaire</a>
+    </div>
+</div>
+
+<!-- MODAL SELECCIÓN PÓLIZA -->
+<div class="modal fade" id="modalPolizas" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-dark text-white"><h5 class="modal-title">Selectionner une police</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="text" id="searchPoliza" class="form-control mb-3" placeholder="Buscar por police o assuré..." oninput="cargarPolizas(this.value)">
+        <div class="table-responsive" style="max-height:400px"><table class="table table-hover table-sm"><thead><tr><th>Recu</th><th>Police</th><th>Assuré</th><th>Marque</th><th>Matr.</th><th></th></tr></thead><tbody id="tablaPolizasBody"></tbody></table></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button></div>
+</div></div></div>
+
+<!-- MODAL DOCUMENTOS PÓLIZA (reutilizar) -->
+<div class="modal fade" id="modalDocsPoliza" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-dark text-white"><h5 class="modal-title">Documentos de la póliza (reutilizar)</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div id="docsPolizaContainer"><p class="text-muted">Selecciona primero una póliza.</p></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="confirmarDocsReutilizados()" data-bs-dismiss="modal"><i class="fas fa-check"></i> Listo</button></div>
+</div></div></div>
+
+<!-- MODAL NUEVOS DOCUMENTOS -->
+<div class="modal fade" id="modalNuevosDocs" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-dark text-white"><h5 class="modal-title">Adjuntar nuevos documentos</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div id="contenedor-filas-docs-siniestro">
+            <div class="row mb-3 fila-doc-siniestro">
+                <div class="col-md-5">
+                    <select name="tipo_doc_siniestro[]" class="form-control">
+                        <option value="">Seleccioner un type...</option>
+                        {% for t in tipos_doc %}<option value="{{ t.id }}">{{ t.tipo_documento }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <input type="file" name="archivos_siniestro_0" class="form-control" multiple>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="eliminarFilaDocSiniestro(this)"><i class="fa fa-trash"></i></button>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="nuevaFilaDocSiniestro()">+ Añadir otra categoría</button>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Listo</button></div>
+</div></div></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let docsReutilizados = [];
+let filaDocIdx = 1;
+
+function cargarPolizas(q) {
+    fetch('{% url "get_polizas_siniestro" %}?q=' + encodeURIComponent(q))
+        .then(r => r.json()).then(data => {
+            let html = '';
+            data.forEach(p => {
+                html += '<tr><td>' + p.recu + '</td><td>' + p.police + '</td><td>' + p.assure + '</td><td>' + p.marque + '</td><td>' + p.matricule +
+                    '</td><td><button class="btn btn-sm btn-success" onclick="seleccionarPoliza(' + p.recu + ',\'' + p.police.replace(/'/g,"\\'") + '\',\'' + p.assure.replace(/'/g,"\\'") + '\')">Sel.</button></td></tr>';
+            });
+            document.getElementById('tablaPolizasBody').innerHTML = html || '<tr><td colspan="6" class="text-center">Sin resultados</td></tr>';
+        });
+}
+
+function seleccionarPoliza(recu, police, assure) {
+    document.getElementById('id_recu').value = recu;
+    document.getElementById('id_police').value = police;
+    document.getElementById('id_assure').value = assure;
+    bootstrap.Modal.getInstance(document.getElementById('modalPolizas')).hide();
+    // Cargar documentos de esta póliza para posible reutilización
+    fetch('{% url "get_poliza_documentos" 0 %}'.replace('/0/', '/' + recu + '/'))
+        .then(r => r.json()).then(docs => {
+            let html = '';
+            if (docs.length === 0) html = '<p class="text-muted">Esta póliza no tiene documentos.</p>';
+            docs.forEach(d => {
+                html += '<div class="form-check"><input class="form-check-input doc-reutilizar" type="checkbox" value="' + d.id + '" id="doc_reu_' + d.id + '"><label class="form-check-label" for="doc_reu_' + d.id + '">' + d.tipo + ' - ' + d.nombre + '</label></div>';
+            });
+            document.getElementById('docsPolizaContainer').innerHTML = html;
+        });
+}
+
+function confirmarDocsReutilizados() {
+    docsReutilizados = [];
+    document.querySelectorAll('.doc-reutilizar:checked').forEach(cb => {
+        docsReutilizados.push(cb.value);
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'docs_reutilizados[]';
+        input.value = cb.value;
+        document.getElementById('formSiniestro').appendChild(input);
+    });
+}
+
+function nuevaFilaDocSiniestro() {
+    const container = document.getElementById('contenedor-filas-docs-siniestro');
+    const first = container.querySelector('.fila-doc-siniestro');
+    const clone = first.cloneNode(true);
+    clone.querySelector('select').value = '';
+    clone.querySelector('input[type="file"]').value = '';
+    clone.querySelector('input[type="file"]').name = 'archivos_siniestro_' + filaDocIdx;
+    container.appendChild(clone);
+    filaDocIdx++;
+}
+
+function eliminarFilaDocSiniestro(btn) {
+    const container = document.getElementById('contenedor-filas-docs-siniestro');
+    if (container.querySelectorAll('.fila-doc-siniestro').length > 1) btn.closest('.fila-doc-siniestro').remove();
+    else alert('Debes dejar al menos una categoría.');
+}
+
+cargarPolizas('');
+</script>
+{% endblock %}

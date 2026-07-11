@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Tipos de Documento - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-file-alt"></i> Tipos de Documento</h4>
+        <a href="{% url 'tipo_documento_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nuevo Tipo</a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover datatable">
+                <thead>
+                    <tr><th>ID</th><th>Tipo de Documento</th><th>Creado</th></tr>
+                </thead>
+                <tbody>
+                    {% for t in tipos %}
+                    <tr>
+                        <td>{{ t.id }}</td>
+                        <td>{{ t.tipo_documento }}</td>
+                        <td>{{ t.creado_el|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center">No hay tipos de documento</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

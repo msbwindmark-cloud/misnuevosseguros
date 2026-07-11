@@ -1,0 +1,598 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Nueva Póliza - Proyecto SIS{% endblock %}
+{% block content %}
+{% if errors %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong><i class="fas fa-exclamation-triangle"></i> Champs obligatoires manquants :</strong>
+    <ul class="mb-0 mt-1">
+        {% for field, msg in errors.items %}
+        <li><strong>{{ field }}</strong> : {{ msg }}</li>
+        {% endfor %}
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+<form method="post" id="formPoliza" enctype="multipart/form-data">
+{% csrf_token %}
+<input type="hidden" name="garantias_data" id="garantias_data" value="[]">
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <h4 class="mb-0"><i class="fas fa-file-invoice"></i> Nueva Póliza</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3"><label>Reçu nº:</label><input type="text" class="form-control" name="recu" value="{{ val.recu }}" readonly></div>
+            <div class="col-md-3"><label>Date:</label><input type="date" class="form-control" name="fecha_hoy" value="{{ val.fecha_hoy }}"></div>
+            <div class="col-md-6">
+                <label>Type d'affaire:</label>
+                <select class="form-select{% if errors.letype %} is-invalid{% endif %}" name="letype">
+                    <option value="">Seleccioner une affaire</option>
+                    <option value="Affaire nouvelle"{% if val.letype == 'Affaire nouvelle' %} selected{% endif %}>Affaire nouvelle</option>
+                    <option value="Renouvellement"{% if val.letype == 'Renouvellement' %} selected{% endif %}>Renouvellement</option>
+                    <option value="Changement vehicule"{% if val.letype == 'Changement vehicule' %} selected{% endif %}>Changement vehicule</option>
+                    <option value="Duplicata"{% if val.letype == 'Duplicata' %} selected{% endif %}>Duplicata</option>
+                    <option value="Resiliation"{% if val.letype == 'Resiliation' %} selected{% endif %}>Resiliation</option>
+                    <option value="Autre provisoire"{% if val.letype == 'Autre provisoire' %} selected{% endif %}>Autre provisoire</option>
+                    <option value="Attestation définitive"{% if val.letype == 'Attestation définitive' %} selected{% endif %}>Attestation définitive</option>
+                    <option value="Autres"{% if val.letype == 'Autres' %} selected{% endif %}>Autres</option>
+                    <option value="Carte Verte"{% if val.letype == 'Carte Verte' %} selected{% endif %}>Carte Verte</option>
+                    <option value="Régularisation de prime"{% if val.letype == 'Régularisation de prime' %} selected{% endif %}>Régularisation de prime</option>
+                    <option value="Complement de paiment"{% if val.letype == 'Complement de paiment' %} selected{% endif %}>Complement de paiment</option>
+                    <option value="PRECISION"{% if val.letype == 'PRECISION' %} selected{% endif %}>PRECISION</option>
+                </select>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-3">
+                <label>Attestation:</label>
+                <input type="text" class="form-control{% if errors.attestation %} is-invalid{% endif %}" name="attestation" id="id_attestation" value="{{ val.attestation }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-warning btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalAjouterAttestation">
+                    <i class="fas fa-plus-circle"></i> Ajouter Attestation
+                </button>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-info btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalConsulterAttestation">
+                    <i class="fas fa-list"></i> Consulter Attestation
+                </button>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-info btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalGarantias">
+                    <i class="fas fa-shield-alt"></i> Les Garanties
+                </button>
+                {% if errors.garantias %}<div class="text-danger small mt-1"><i class="fas fa-exclamation-circle"></i> {{ errors.garantias }}</div>{% endif %}
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalDocumentos">
+                    <i class="fas fa-file"></i> Documents
+                </button>
+            </div>
+            <div class="col-12 mt-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="doc_obligatorios" id="docObligatorios" value="1" {% if doc_obligatorios %}checked{% endif %}>
+                    <label class="form-check-label" for="docObligatorios">
+                        Documents optionnels (si décoché, l'ajout de documents est obligatoire pour enregistrer)
+                    </label>
+                    {% if errors.documentos %}<div class="text-danger small mt-1"><i class="fas fa-exclamation-circle"></i> {{ errors.documentos }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <label>Nº Police:</label>
+                <div class="input-group">
+                    <input type="text" class="form-control{% if errors.police %} is-invalid{% endif %}" name="police" id="id_police" value="{{ val.police }}">
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalSelectionnerPolice">
+                        <i class="fas fa-search"></i> Selectionner Police
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-4"><label>Marque:</label><input type="text" class="form-control{% if errors.marque %} is-invalid{% endif %}" name="marque" id="id_marque" value="{{ val.marque }}" oninput="autoFillDesignation()"></div>
+            <div class="col-md-4"><label>Matricule:</label><input type="text" class="form-control{% if errors.matricule %} is-invalid{% endif %}" name="matricule" id="id_matricule" value="{{ val.matricule }}" oninput="autoFillDesignation()"></div>
+            <div class="col-md-4"><label>Produit:</label><input type="text" class="form-control{% if errors.produit %} is-invalid{% endif %}" name="produit" value="{{ val.produit }}"></div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-12"><label>Désignation:</label><input type="text" class="form-control" name="designation" id="id_designation" value="{{ val.designation }}" readonly></div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <label>Nom Assuré:</label>
+                <input type="text" class="form-control{% if errors.assure %} is-invalid{% endif %}" name="assure" id="id_assure" value="{{ val.assure }}">
+            </div>
+            <div class="col-md-3"><label>Prénom:</label><input type="text" class="form-control" name="prenom" id="id_prenom" value="{{ val.prenom }}"></div>
+            <div class="col-md-2"><label>Code Client:</label><input type="text" class="form-control" name="code_client" id="id_code_client" value="{{ val.code_client }}" readonly></div>
+            <div class="col-md-3 d-flex align-items-end gap-1">
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalClientes" title="Charger le client">
+                    <i class="fas fa-search"></i> Charger le client
+                </button>
+                <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoCliente" title="Ajouter le client">
+                    <i class="fas fa-plus"></i> Ajouter le client
+                </button>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-4"><label>Tel:</label><input type="text" class="form-control" name="telefono" id="id_telefono" value="{{ val.telefono }}"></div>
+            <div class="col-md-4"><label>Email:</label><input type="text" class="form-control" name="email" id="id_email" value="{{ val.email }}"></div>
+            <div class="col-md-4"><label>Adresse:</label><input type="text" class="form-control" name="address_client" id="id_address" value="{{ val.address_client }}"></div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-3"><label>Du:</label><input type="date" class="form-control{% if errors.du %} is-invalid{% endif %}" name="du" value="{{ val.du }}"></div>
+            <div class="col-md-3"><label>Au:</label><input type="date" class="form-control{% if errors.au %} is-invalid{% endif %}" name="au" value="{{ val.au }}"></div>
+        </div>
+        <hr>
+        <h5>Montants</h5>
+        <div class="row">
+            <div class="col-md-2"><label>Prime Nette :</label><input type="number" step="0.01" class="form-control" name="prime_net" id="id_prime_net" value="{{ val.prime_net }}" oninput="calcTotale()"></div>
+            <div class="col-md-2"><label>Taxes :</label><input type="number" step="0.01" class="form-control" name="taxes" id="id_taxes" value="{{ val.taxes }}" oninput="calcTotale()"></div>
+            <div class="col-md-2"><label>T.P :</label><input type="number" step="0.01" class="form-control" name="tp" id="id_tp" value="{{ val.tp }}" oninput="calcTotale()"></div>
+            <div class="col-md-2"><label>ACCESOIRES :</label><input type="number" step="0.01" class="form-control" name="accesoires" id="id_accesoires" value="{{ val.accesoires }}" oninput="calcTotale()"></div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-2"><label>Prime totale :</label><input type="number" step="0.01" class="form-control{% if errors.totale %} is-invalid{% endif %}" name="totale" id="id_totale" value="{{ val.totale }}" oninput="calcReste()"></div>
+            <div class="col-md-2"><label>Espece :</label><input type="number" step="0.01" class="form-control" name="espece" id="id_espece" value="{{ val.espece }}" oninput="calcReste()"></div>
+            <div class="col-md-2"><label>Cheque :</label><input type="number" step="0.01" class="form-control" name="cheque" id="id_cheque" value="{{ val.cheque }}" oninput="calcReste()"></div>
+            <div class="col-md-2"><label>Virement :</label><input type="number" step="0.01" class="form-control" name="virement" id="id_virement" value="{{ val.virement }}" oninput="calcReste()"></div>
+            <div class="col-md-2"><label>Reste a regler :</label><input type="text" class="form-control" name="reste" id="id_reste" value="{{ val.reste }}" readonly></div>
+            <div class="col-md-2"><label>Date Versement :</label><input type="date" class="form-control" name="date_versement" id="id_date_versement" value="{{ val.date_versement }}"></div>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="row mt-2">
+            <div class="col">
+                <button type="submit" class="btn btn-success p-3 elboton" id="enregistrerBtn" {% if poliza_saved %}disabled{% endif %}>
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+                <a href="{% url 'envio_banco_create' %}" class="btn btn-success mt-2"><i class="fas fa-paper-plane"></i> Generer un envoie</a>
+                <a href="{% url 'envio_banco_list' %}" class="btn btn-outline-success btn-sm mt-2"><i class="fas fa-list"></i> Lista envios</a>
+            </div>
+            <div class="col">
+                <a href="{% url 'poliza_list' %}" class="btn btn-success mb-3"><i class="fas fa-list"></i> La liste de tous les reçus</a>
+                <a href="{% url 'cliente_list' %}" class="btn btn-success"><i class="fas fa-users"></i> La liste de tous les Clients</a>
+            </div>
+            {% if poliza_saved %}
+            <div class="col">
+                <a href="{% url 'generate_poliza_pdf_with_header' poliza_saved.recu %}" target="_blank" class="btn btn-danger mb-3"><i class="fas fa-file-pdf"></i> Imprimer le Reçu avec entête</a>
+                <a href="{% url 'generate_poliza_pdf_sans_entete' poliza_saved.recu %}" target="_blank" class="btn btn-success"><i class="fas fa-file-pdf"></i> Imprimer le Reçu sans entête</a>
+            </div>
+            <div class="col">
+                <a href="{% url 'invoice_by_receipt' poliza_saved.recu %}" target="_blank" class="btn btn-secondary mb-3"><i class="fas fa-file-invoice"></i> Generer Une Facture</a>
+                <a href="{% url 'statement_by_receipt' poliza_saved.recu %}" target="_blank" class="btn btn-warning"><i class="fas fa-file-excel"></i> Generer Un Relevé</a>
+            </div>
+            {% endif %}
+            <div class="col">
+                <a href="{% url 'poliza_create' %}" class="btn btn-success"><i class="fas fa-redo"></i> Rafrechir la page</a>
+                <a href="{% url 'sinistro_create' %}" class="btn btn-warning mt-3"><i class="fas fa-car-crash"></i> Formulaire sinistre</a>
+            </div>
+            <div class="col">
+                <a href="{% url 'import_attestations_excel' %}" class="btn btn-success"><i class="fas fa-file-excel"></i> Importar excel attestation</a>
+                <a href="{% url 'sinistro_list' %}" class="btn btn-warning mt-3"><i class="fas fa-list"></i> Liste des sinistres</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DOCUMENTOS -->
+<div class="modal fade" id="modalDocumentos" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-dark text-white"><h5 class="modal-title">Adjunter plusieurs documents</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div id="contenedor-filas-docs">
+            <div class="row mb-3 fila-doc">
+                <div class="col-md-5">
+                    <select name="tipo_doc_modal[]" class="form-control">
+                        <option value="">Seleccioner un type...</option>
+                        {% for t in tipos_doc %}<option value="{{ t.id }}">{{ t.tipo_documento }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <input type="file" name="archivos_modal_0" class="form-control" multiple>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="eliminarFilaDoc(this)"><i class="fa fa-trash"></i></button>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="nuevaFilaDoc()">+ Añadir otra categoría</button>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Listo</button></div>
+</div></div></div>
+
+</form>
+
+<!-- MODAL AJOUTER ATTESTATION -->
+<div class="modal fade" id="modalAjouterAttestation" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-warning text-dark"><h5 class="modal-title">Ajouter une Attestation</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="mb-3">
+            <select class="form-select" id="modal_type_attestation">
+                <option value="">Seleccioner une Type d'Attestation</option>
+                {% for t in tipos_attestation %}<option value="{{ t.id }}">{{ t.type_attestation }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <input type="text" id="modal_numero_attestation" class="form-control" placeholder="Numero Attestation">
+        </div>
+        <button type="button" class="btn btn-warning w-100" onclick="guardarNuevaAttestation()"><i class="fas fa-save"></i> Ajouter une Attestation</button>
+    </div>
+</div></div></div>
+
+<!-- MODAL CONSULTER ATTESTATION -->
+<div class="modal fade" id="modalConsulterAttestation" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-info text-white"><h5 class="modal-title">Consulter Attestation</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="text" id="searchAttestation" class="form-control mb-3" placeholder="Buscar por tipo o número..." oninput="cargarAttestations(this.value)">
+        <div class="table-responsive" style="max-height:400px"><table class="table table-hover table-sm"><thead><tr><th>Tipo</th><th>Número</th><th>Activo</th><th></th></tr></thead><tbody id="tablaAttestationsBody"></tbody></table></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button></div>
+</div></div></div>
+
+<!-- MODAL SELECTIONNER POLICE -->
+<div class="modal fade" id="modalSelectionnerPolice" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content">
+    <div class="modal-header bg-primary text-white"><h5 class="modal-title">Selectionner une police</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="text" id="searchPoliza" class="form-control mb-3" placeholder="Buscar por police, assuré o matricule..." oninput="cargarPolizas(this.value)">
+        <div class="table-responsive" style="max-height:400px"><table class="table table-hover table-sm"><thead><tr><th>Recu</th><th>Date</th><th>Police</th><th>Marque</th><th>Matricule</th><th>Produit</th><th>Assuré</th><th>Code</th><th></th></tr></thead><tbody id="tablaPolizasBody"></tbody></table></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button></div>
+</div></div></div>
+
+<!-- MODAL CLIENTES -->
+<div class="modal fade" id="modalClientes" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-dark text-white"><h5 class="modal-title">Selectionner un client</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="text" id="searchClient" class="form-control mb-3" placeholder="Buscar por nombre o código..." oninput="cargarClientes(this.value)">
+        <div class="table-responsive" style="max-height:400px"><table class="table table-hover table-sm"><thead><tr><th>Código</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th></th></tr></thead><tbody id="tablaClientesBody"></tbody></table></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button></div>
+</div></div></div>
+
+<!-- MODAL NUEVO CLIENTE -->
+<div class="modal fade" id="modalNuevoCliente" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-success text-white"><h5 class="modal-title">Ajouter un client</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="mb-2"><input type="text" id="new_code_client" class="form-control" placeholder="Code Client"></div>
+        <div class="mb-2"><input type="text" id="new_nom_client" class="form-control" placeholder="Nom *" required></div>
+        <div class="mb-2"><input type="text" id="new_telephone_client" class="form-control" placeholder="Téléphone"></div>
+        <div class="mb-2"><input type="text" id="new_email_client" class="form-control" placeholder="Email"></div>
+        <button type="button" class="btn btn-success w-100" onclick="guardarNuevoCliente()"><i class="fas fa-save"></i> Enregistrer</button>
+    </div>
+</div></div></div>
+
+<!-- MODAL GARANTÍAS -->
+<div class="modal fade" id="modalGarantias" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content">
+    <div class="modal-header bg-dark text-white"><h5 class="modal-title">Sélectionner une ou plusieurs garanties</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="row" id="garantiasGrid">
+        {% for g in garantias %}
+            <div class="col-md-4 mb-4">
+                <div class="form-check ps-3 garantia-item">
+                    <input class="form-check-input garantia-check" type="checkbox" id="garantie_{{ g.id }}" value="{{ g.id }}" data-nom="{{ g.nom_garantie }}">
+                    <label class="form-check-label" for="garantie_{{ g.id }}">{{ g.nom_garantie }}</label>
+                    {% if g.id in garantias_opciones %}
+                    <div id="options_garantie_{{ g.id }}" class="mt-2" style="display:none">
+                        <select class="form-select form-select-sm option-select" data-garantia="{{ g.id }}">
+                            <option value="">-- Choisir une option --</option>
+                        </select>
+                        <div id="franchise_container_{{ g.id }}" class="mt-1" style="display:none">
+                            <select class="form-select form-select-sm franchise-select" data-garantia="{{ g.id }}">
+                                <option value="">-- Choisir une franchise --</option>
+                            </select>
+                        </div>
+                        <div id="montant_container_{{ g.id }}" class="mt-1" style="display:none">
+                            <input type="number" step="0.01" class="form-control form-control-sm montant-input" data-garantia="{{ g.id }}" placeholder="Montant">
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if g.id in garantias_montant %}
+                    <div id="montant_container_{{ g.id }}" class="mt-2" style="display:none">
+                        <input type="number" step="0.01" class="form-control form-control-sm montant-input" data-garantia="{{ g.id }}" placeholder="Montant">
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% if forloop.counter|divisibleby:3 and not forloop.last %}</div><div class="row mt-3">{% endif %}
+        {% endfor %}
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="confirmarGarantias()" data-bs-dismiss="modal"><i class="fas fa-check"></i> Listo</button>
+    </div>
+</div></div></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+{% if poliza_saved %}
+Swal.fire({
+    icon: 'success',
+    title: 'Póliza creada',
+    text: 'Póliza nº {{ poliza_saved.recu }} creada correctamente',
+    timer: 3000,
+    showConfirmButton: true
+});
+{% endif %}
+
+document.getElementById('formPoliza')?.addEventListener('submit', function() {
+    const btn = document.getElementById('enregistrerBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+});
+
+const tiposAttestationOptions = `{% for t in tipos_attestation %}<option value="{{ t.id }}">{{ t.type_attestation }}</option>{% endfor %}`;
+let filaDocIndex = 1;
+let garantiasSeleccionadas = [];
+const EDITING_GARANTIAS = {% if editing %}{{ garantias_data_json|safe }}{% else %}[]{% endif %};
+
+function autoFillDesignation() {
+    const marque = document.getElementById('id_marque').value.trim();
+    const matricule = document.getElementById('id_matricule').value.trim();
+    document.getElementById('id_designation').value = marque || matricule ? 'Assurance_' + marque + '_' + matricule : '';
+}
+function calcReste() {
+    const t = parseFloat(document.getElementById('id_totale').value) || 0;
+    const e = parseFloat(document.getElementById('id_espece').value) || 0;
+    const c = parseFloat(document.getElementById('id_cheque').value) || 0;
+    const v = parseFloat(document.getElementById('id_virement').value) || 0;
+    document.getElementById('id_reste').value = (t - e - c - v).toFixed(2);
+}
+function calcTotale() {
+    const pn = parseFloat(document.getElementById('id_prime_net').value) || 0;
+    const tx = parseFloat(document.getElementById('id_taxes').value) || 0;
+    const tp = parseFloat(document.getElementById('id_tp').value) || 0;
+    const ac = parseFloat(document.getElementById('id_accesoires').value) || 0;
+    document.getElementById('id_totale').value = (pn + tx + tp + ac).toFixed(2);
+    calcReste();
+}
+function seleccionarCliente(id, code, nom, tel, email) {
+    document.getElementById('id_assure').value = nom;
+    document.getElementById('id_code_client').value = code;
+    document.getElementById('id_telefono').value = tel;
+    document.getElementById('id_email').value = email;
+    bootstrap.Modal.getInstance(document.getElementById('modalClientes')).hide();
+}
+function cargarClientes(q) {
+    fetch('{% url "get_clientes_json" %}?q=' + encodeURIComponent(q))
+        .then(r => r.json()).then(data => {
+            let html = '';
+            data.forEach(c => {
+                html += '<tr><td>' + c.code + '</td><td>' + c.nom + '</td><td>' + c.tel + '</td><td>' + c.email +
+                    '</td><td><button class="btn btn-sm btn-success" onclick="seleccionarCliente(' + c.id + ',\'' + c.code + '\',\'' + c.nom.replace(/'/g,"\\'") + '\',\'' + c.tel + '\',\'' + c.email + '\')">Sel.</button></td></tr>';
+            });
+            document.getElementById('tablaClientesBody').innerHTML = html || '<tr><td colspan="5" class="text-center">Sin resultados</td></tr>';
+        });
+}
+function guardarNuevoCliente() {
+    const fd = new FormData();
+    fd.append('code_client', document.getElementById('new_code_client').value);
+    fd.append('nom_client', document.getElementById('new_nom_client').value);
+    fd.append('telephone_client', document.getElementById('new_telephone_client').value);
+    fd.append('email_client', document.getElementById('new_email_client').value);
+    fetch('{% url "crear_cliente_ajax" %}', { method:'POST', body:fd })
+        .then(r => r.json()).then(res => {
+            if(res.ok) {
+                seleccionarCliente(res.cliente.id, res.cliente.code, res.cliente.nom, res.cliente.tel, res.cliente.email);
+                bootstrap.Modal.getInstance(document.getElementById('modalNuevoCliente')).hide();
+                Swal.fire('Creado','Cliente creado correctamente','success');
+            } else {
+                Swal.fire('Error',res.error||'Error al crear','error');
+            }
+        });
+}
+
+// Attestations
+function guardarNuevaAttestation() {
+    const fd = new FormData();
+    fd.append('type_attestation', document.getElementById('modal_type_attestation').value);
+    fd.append('numero_attestation', document.getElementById('modal_numero_attestation').value);
+    fetch('{% url "crear_attestation_ajax" %}', { method:'POST', body:fd })
+        .then(r => r.json()).then(res => {
+            if (res.ok) {
+                document.getElementById('id_attestation').value = res.attestation.type + ' - ' + res.attestation.numero;
+                bootstrap.Modal.getInstance(document.getElementById('modalAjouterAttestation')).hide();
+                document.getElementById('modal_type_attestation').value = '';
+                document.getElementById('modal_numero_attestation').value = '';
+                Swal.fire('Creada','Attestation creada correctamente','success');
+            } else {
+                Swal.fire('Error',res.error||'Error al crear','error');
+            }
+        });
+}
+function seleccionarAttestation(id, type, numero) {
+    document.getElementById('id_attestation').value = type + ' - ' + numero;
+    bootstrap.Modal.getInstance(document.getElementById('modalConsulterAttestation')).hide();
+}
+function cargarAttestations(q) {
+    fetch('{% url "get_attestations_json" %}?q=' + encodeURIComponent(q))
+        .then(r => r.json()).then(data => {
+            let html = '';
+            data.forEach(a => {
+                html += '<tr><td>' + a.type + '</td><td>' + a.numero + '</td><td>' + (a.active ? 'Sí' : 'No') +
+                    '</td><td><button class="btn btn-sm btn-info" onclick="seleccionarAttestation(' + a.id + ',\'' + a.type.replace(/'/g,"\\'") + '\',\'' + a.numero.replace(/'/g,"\\'") + '\')">Sel.</button></td></tr>';
+            });
+            document.getElementById('tablaAttestationsBody').innerHTML = html || '<tr><td colspan="4" class="text-center">Sin resultados</td></tr>';
+        });
+}
+// Polizas para Selectionner Police
+function seleccionarPoliza(police, attestation, marque, matricule, produit, designation, assure, code_client, tel, email, adresse, fecha_hoy, du, au) {
+    document.getElementById('id_police').value = police;
+    document.getElementById('id_attestation').value = attestation;
+    document.getElementById('id_marque').value = marque;
+    document.getElementById('id_matricule').value = matricule;
+    document.querySelector('[name="produit"]').value = produit;
+    document.getElementById('id_designation').value = designation;
+    document.getElementById('id_assure').value = assure;
+    document.getElementById('id_code_client').value = code_client;
+    document.getElementById('id_telefono').value = tel;
+    document.getElementById('id_email').value = email;
+    document.getElementById('id_address').value = adresse;
+    document.querySelector('[name="fecha_hoy"]').value = fecha_hoy;
+    document.querySelector('[name="du"]').value = du;
+    document.querySelector('[name="au"]').value = au;
+    bootstrap.Modal.getInstance(document.getElementById('modalSelectionnerPolice')).hide();
+}
+function cargarPolizas(q) {
+    fetch('{% url "get_polizas_json" %}?q=' + encodeURIComponent(q))
+        .then(r => r.json()).then(data => {
+            let html = '';
+            data.forEach(p => {
+                html += '<tr><td>' + p.recu + '</td><td>' + p.fecha + '</td><td>' + p.police + '</td><td>' + p.marque + '</td><td>' + p.matricule + '</td><td>' + p.produit + '</td><td>' + p.assure + '</td><td>' + p.code_client + '</td><td><button class="btn btn-sm btn-primary" onclick="seleccionarPoliza(\'' +
+                    (p.police||'').replace(/'/g,"\\'") + '\',\'' + (p.attestation||'').replace(/'/g,"\\'") + '\',\'' + (p.marque||'').replace(/'/g,"\\'") + '\',\'' + (p.matricule||'').replace(/'/g,"\\'") + '\',\'' + (p.produit||'').replace(/'/g,"\\'") + '\',\'' + (p.designation||'').replace(/'/g,"\\'") + '\',\'' + (p.assure||'').replace(/'/g,"\\'") + '\',\'' + (p.code_client||'').replace(/'/g,"\\'") + '\',\'' + (p.tel||'').replace(/'/g,"\\'") + '\',\'' + (p.email||'').replace(/'/g,"\\'") + '\',\'' + (p.adresse||'').replace(/'/g,"\\'") + '\',\'' + (p.fecha||'').replace(/'/g,"\\'") + '\',\'' + (p.du||'').replace(/'/g,"\\'") + '\',\'' + (p.au||'').replace(/'/g,"\\'") + '\')">Sel.</button></td></tr>';
+            });
+            document.getElementById('tablaPolizasBody').innerHTML = html || '<tr><td colspan="9" class="text-center">Sin resultados</td></tr>';
+        });
+}
+// Garantías
+document.querySelectorAll('.garantia-check').forEach(cb => {
+    cb.addEventListener('change', function() {
+        const id = this.value;
+        const divOptions = document.getElementById('options_garantie_' + id);
+        const divMontant = document.getElementById('montant_container_' + id);
+        const sel = divOptions?.querySelector('.option-select');
+        if (this.checked) {
+            if (divOptions) divOptions.style.display = 'block';
+            if (divMontant && !divOptions) divMontant.style.display = 'block';
+            if (sel && sel.options.length <= 1) {
+                fetch('{% url "get_garantia_options" 0 %}'.replace('/0/', '/' + id + '/'))
+                    .then(r => r.json()).then(data => {
+                        sel.innerHTML = '<option value="">-- Choisir une option --</option>';
+                        data.forEach(o => {
+                            sel.innerHTML += '<option value="' + o.id + '">' + o.nom_option + '</option>';
+                        });
+                    });
+            }
+        } else {
+            if (divOptions) divOptions.style.display = 'none';
+            if (divMontant && !divOptions) divMontant.style.display = 'none';
+            if (sel) sel.value = '';
+            const fc = document.getElementById('franchise_container_' + id);
+            if (fc) { fc.style.display = 'none'; fc.querySelector('.franchise-select').innerHTML = '<option value="">-- Choisir une franchise --</option>'; }
+        }
+    });
+});
+document.querySelectorAll('.option-select').forEach(sel => {
+    sel.addEventListener('change', function() {
+        const gid = this.dataset.garantia;
+        const fid = this.value;
+        const fc = document.getElementById('franchise_container_' + gid);
+        const mc9 = document.getElementById('montant_container_9');
+        const mc13 = document.getElementById('montant_container_13');
+        if (fc) {
+            if (fid) {
+                fetch('{% url "get_option_franchises" 0 %}'.replace('/0/', '/' + fid + '/'))
+                    .then(r => r.json()).then(data => {
+                        let html = '<option value="">-- Choisir une franchise --</option>';
+                        data.forEach(f => { html += '<option value="' + f.id + '">' + f.nom_franchise + '</option>'; });
+                        fc.querySelector('.franchise-select').innerHTML = html;
+                        fc.style.display = 'block';
+                    });
+            } else {
+                fc.style.display = 'none';
+            }
+        }
+        if (mc9 && gid === '9') mc9.style.display = (fid === '41') ? 'block' : 'none';
+        if (mc13 && gid === '13') mc13.style.display = fid ? 'block' : 'none';
+    });
+});
+document.querySelectorAll('.franchise-select').forEach(sel => {
+    sel.addEventListener('change', function() {
+        const gid = this.dataset.garantia;
+        const mc = document.getElementById('montant_container_' + gid);
+        if (mc && gid === '10') mc.style.display = this.value ? 'block' : 'none';
+    });
+});
+function confirmarGarantias() {
+    garantiasSeleccionadas = [];
+    document.querySelectorAll('.garantia-check:checked').forEach(cb => {
+        const id = cb.value;
+        const item = { id_garantie: id };
+        const optSel = document.querySelector('.option-select[data-garantia="' + id + '"]');
+        const franSel = document.querySelector('.franchise-select[data-garantia="' + id + '"]');
+        const montInp = document.querySelector('.montant-input[data-garantia="' + id + '"]');
+        if (optSel && optSel.value) item.id_option = optSel.value;
+        if (franSel && franSel.value) item.id_franchise = franSel.value;
+        if (montInp && montInp.value) item.montant = montInp.value;
+        garantiasSeleccionadas.push(item);
+    });
+    document.getElementById('garantias_data').value = JSON.stringify(garantiasSeleccionadas);
+}
+
+// Documentos
+function nuevaFilaDoc() {
+    const container = document.getElementById('contenedor-filas-docs');
+    const first = container.querySelector('.fila-doc');
+    const clone = first.cloneNode(true);
+    clone.querySelector('select').value = '';
+    clone.querySelector('input[type="file"]').value = '';
+    clone.querySelector('input[type="file"]').name = 'archivos_modal_' + filaDocIndex;
+    container.appendChild(clone);
+    filaDocIndex++;
+}
+function eliminarFilaDoc(btn) {
+    const container = document.getElementById('contenedor-filas-docs');
+    if (container.querySelectorAll('.fila-doc').length > 1) btn.closest('.fila-doc').remove();
+    else alert('Debes dejar al menos una categoría.');
+}
+cargarClientes('');
+cargarAttestations('');
+cargarPolizas('');
+document.getElementById('modalConsulterAttestation')?.addEventListener('shown.bs.modal', function() { cargarAttestations(document.getElementById('searchAttestation').value); });
+document.getElementById('modalSelectionnerPolice')?.addEventListener('shown.bs.modal', function() { cargarPolizas(document.getElementById('searchPoliza').value); });
+document.getElementById('modalClientes')?.addEventListener('shown.bs.modal', function() { cargarClientes(document.getElementById('searchClient').value); });
+
+// Pre-populate garantias when editing
+if (EDITING_GARANTIAS.length) {
+    async function initGarantias() {
+        for (const g of EDITING_GARANTIAS) {
+            const cb = document.querySelector('.garantia-check[value="' + g.id + '"]');
+            if (!cb) continue;
+            cb.checked = true;
+            const divOptions = document.getElementById('options_garantie_' + g.id);
+            const sel = divOptions?.querySelector('.option-select');
+            if (divOptions) divOptions.style.display = 'block';
+            if (sel) {
+                // Load options if not already loaded
+                if (sel.options.length <= 1) {
+                    try {
+                        const r = await fetch('{% url "get_garantia_options" 0 %}'.replace('/0/', '/' + g.id + '/'));
+                        const data = await r.json();
+                        sel.innerHTML = '<option value="">-- Choisir une option --</option>';
+                        data.forEach(o => {
+                            sel.innerHTML += '<option value="' + o.id + '">' + o.nom_option + '</option>';
+                        });
+                    } catch(e) { console.error(e); }
+                }
+                if (g.option) {
+                    sel.value = g.option.id;
+                    // Trigger change to load franchises
+                    const evt = new Event('change');
+                    sel.dispatchEvent(evt);
+                    // Wait a tick then set franchise
+                    setTimeout(() => {
+                        const fc = document.getElementById('franchise_container_' + g.id);
+                        const franSel = fc?.querySelector('.franchise-select');
+                        if (franSel && g.franchise) {
+                            franSel.value = g.franchise.id;
+                            const evt2 = new Event('change');
+                            franSel.dispatchEvent(evt2);
+                        }
+                        const montInp = document.querySelector('.montant-input[data-garantia="' + g.id + '"]');
+                        if (montInp) {
+                            if (g.option.valeur) montInp.value = g.option.valeur;
+                            else if (g.franchise && g.franchise.montant) montInp.value = g.franchise.montant;
+                            else if (g.valeur) montInp.value = g.valeur;
+                        }
+                    }, 300);
+                }
+            }
+            const divMontant = document.getElementById('montant_container_' + g.id);
+            if (divMontant && !divOptions) divMontant.style.display = 'block';
+        }
+    }
+    initGarantias();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Editar Atestación{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-warning text-dark">
+      <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Editar Atestación</h5>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">ID</label>
+          <input type="text" class="form-control" value="{{ object.id }}" readonly>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{{ form.id_type_attestation.label }}</label>
+          {{ form.id_type_attestation }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{{ form.numero_attestation.label }}</label>
+          {{ form.numero_attestation }}
+        </div>
+        <div class="mb-3 form-check">
+          {{ form.seleccionado }}
+          <label class="form-check-label">{{ form.seleccionado.label }}</label>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>Guardar</button>
+          <a href="{% url 'attestation_list' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

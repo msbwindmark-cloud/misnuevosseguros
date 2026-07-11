@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Sin pólizas - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="container mt-5 text-center">
+    <p class="text-muted">Redirigiendo al listado de clientes...</p>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    Swal.fire({
+        icon: 'info',
+        title: 'Aucune póliza',
+        text: 'No se encontraron pólizas para este cliente.',
+        confirmButtonText: 'Volver al listado',
+        allowOutsideClick: false
+    }).then(function () {
+        window.location.href = "{% url 'poliza_list' %}#{{ modal }}";
+    });
+</script>
+{% endblock %}

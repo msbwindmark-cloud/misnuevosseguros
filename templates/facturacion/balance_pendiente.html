@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}Balance Pendiente - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-balance-scale"></i> Balance Pendiente</h4>
+        <div>
+            <a href="?export_excel=1" class="btn btn-success btn-sm"><i class="fas fa-file-excel"></i> Exportar Excel</a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if polizas %}
+        <div class="table-responsive">
+            <table class="table table-hover datatable">
+                <thead>
+                    <tr>
+                        <th>Recibo</th>
+                        <th>Asegurado</th>
+                        <th>Póliza</th>
+                        <th>Total</th>
+                        <th>Pagado</th>
+                        <th>Reste</th>
+                        <th>Teléfono</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in polizas %}
+                    <tr>
+                        <td><a href="{% url 'poliza_detail' p.recu %}">{{ p.recu }}</a></td>
+                        <td>{{ p.assure }}</td>
+                        <td>{{ p.police }}</td>
+                        <td>{{ p.totale }} MAD</td>
+                        <td>{{ p.pagado|floatformat:2 }} MAD</td>
+                        <td class="text-danger fw-bold">{{ p.reste }} MAD</td>
+                        <td>{{ p.telefono }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-dark fw-bold">
+                        <td colspan="3" class="text-end">Totales:</td>
+                        <td>{{ total_general.tot|default:"0.00" }} MAD</td>
+                        <td>{{ pagado_total|floatformat:2 }} MAD</td>
+                        <td>{{ total_general.res|default:"0.00" }} MAD</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info mb-0">No hay pólizas con saldo pendiente.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

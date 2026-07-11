@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Añadir Clientes en Lote{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="fas fa-users me-2"></i>Añadir Clientes en Lote</h5>
+    </div>
+    <div class="card-body">
+      <form method="post" id="batchForm">
+        {% csrf_token %}
+        <div id="rowsContainer">
+          <div class="row mb-2 row-cliente">
+            <div class="col-md-3"><input type="text" name="nombre[]" class="form-control" placeholder="Nombre" required></div>
+            <div class="col-md-3"><input type="text" name="apellidos[]" class="form-control" placeholder="Apellidos"></div>
+            <div class="col-md-3"><input type="email" name="email[]" class="form-control" placeholder="Email"></div>
+            <div class="col-md-2"><input type="text" name="telefono[]" class="form-control" placeholder="Teléfono"></div>
+            <div class="col-md-1 d-grid"><button type="button" class="btn btn-danger remove-row"><i class="fas fa-times"></i></button></div>
+          </div>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+          <button type="button" class="btn btn-success" id="addRow"><i class="fas fa-plus me-1"></i>Añadir fila</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Guardar todos</button>
+          <a href="{% url 'cliente_list' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('#addRow').on('click', function() {
+        var row = $('.row-cliente:first').clone();
+        row.find('input').val('');
+        $('#rowsContainer').append(row);
+    });
+    $(document).on('click', '.remove-row', function() {
+        if ($('.row-cliente').length > 1) $(this).closest('.row-cliente').remove();
+    });
+});
+</script>
+{% endblock %}

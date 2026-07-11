@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar Envío - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h4 class="mb-0"><i class="fas fa-trash"></i> ¿Eliminar envío?</h4>
+    </div>
+    <div class="card-body">
+        <p>¿Estás seguro de que deseas eliminar el envío <strong>{{ object.nom_envoie }}</strong>?</p>
+        <p class="text-muted">Esta acción no se puede deshacer.</p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger"><i class="fas fa-check"></i> Sí, eliminar</button>
+                <a href="{% url 'envio_banco_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> No, cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

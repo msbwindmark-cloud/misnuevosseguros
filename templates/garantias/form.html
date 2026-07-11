@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}{% if garantia %}Editar{% else %}Nueva{% endif %} Garantía - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0"><i class="fas fa-shield-alt"></i> {% if garantia %}Editar{% else %}Nueva{% endif %} Garantía</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" id="garantiaForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nom_garantie" class="form-control" value="{{ form.nom_garantie.value|default:'' }}" required>
+                    </div>
+                    <div class="mb-3 form-check">
+                        {{ form.has_configuration }}
+                        <label class="form-check-label" for="id_has_configuration">Tiene configuración (opciones/franquicias)</label>
+                    </div>
+
+                    <hr>
+                    <h5><i class="fas fa-list"></i> Opciones y Franquicias</h5>
+                    <p class="text-muted small">Cada opción puede tener múltiples franquicias.</p>
+
+                    <div id="optionsContainer">
+                        {% for opt in options %}
+                        <div class="option-group card mb-2 p-3 border-start border-primary border-3">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <input type="text" name="option_nom[]" class="form-control form-control-sm" placeholder="Nombre de la opción" value="{{ opt.nom_option }}" required>
+                                <div class="form-check form-switch mb-0">
+                                    <input type="checkbox" name="option_requires_montant[]" class="form-check-input" role="switch" id="req_montant_{{ forloop.counter0 }}"{% if opt.requires_montant %} checked{% endif %}>
+                                    <label class="form-check-label small" for="req_montant_{{ forloop.counter0 }}">Requiere monto</label>
+                                </div>
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-option"><i class="fas fa-trash"></i></button>
+                            </div>
+                            <div class="franchises-container ms-3">
+                                <label class="small text-muted">Franquicias:</label>
+                                {% for fran in opt.franquicias.all %}
+                                <div class="input-group input-group-sm mb-1 franchise-row">
+                                    <input type="text" name="franchise_nom_{{ forloop.parentloop.counter0 }}[]" class="form-control" placeholder="Nombre de la franquicia" value="{{ fran.nom_franchise }}">
+                                    <button type="button" class="btn btn-outline-danger remove-franchise"><i class="fas fa-times"></i></button>
+                                </div>
+                                {% endfor %}
+                                <button type="button" class="btn btn-outline-primary btn-sm add-franchise" data-option-index="{{ forloop.counter0 }}"><i class="fas fa-plus"></i> Añadir franquicia</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="button" class="btn btn-outline-success mb-3" id="addOption"><i class="fas fa-plus-circle"></i> Añadir opción</button>
+
+                    <hr>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+                        <a href="{% url 'garantia_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let optionCounter = {{ options|length|default:0 }};
+
+document.getElementById('addOption').addEventListener('click', function() {
+    const container = document.getElementById('optionsContainer');
+    const idx = optionCounter++;
+    const div = document.createElement('div');
+    div.className = 'option-group card mb-2 p-3 border-start border-primary border-3';
+    div.innerHTML = `
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <input type="text" name="option_nom[]" class="form-control form-control-sm" placeholder="Nombre de la opción" required>
+            <div class="form-check form-switch mb-0">
+                <input type="checkbox" name="option_requires_montant[]" class="form-check-input" role="switch" id="req_montant_${idx}">
+                <label class="form-check-label small" for="req_montant_${idx}">Requiere monto</label>
+            </div>
+            <button type="button" class="btn btn-outline-danger btn-sm remove-option"><i class="fas fa-trash"></i></button>
+        </div>
+        <div class="franchises-container ms-3">
+            <label class="small text-muted">Franquicias:</label>
+            <div class="input-group input-group-sm mb-1 franchise-row">
+                <input type="text" name="franchise_nom_${idx}[]" class="form-control" placeholder="Nombre de la franquicia">
+                <button type="button" class="btn btn-outline-danger remove-franchise"><i class="fas fa-times"></i></button>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm add-franchise" data-option-index="${idx}"><i class="fas fa-plus"></i> Añadir franquicia</button>
+        </div>
+    `;
+    container.appendChild(div);
+    attachEvents(div);
+});
+
+function attachEvents(el) {
+    el.querySelector('.remove-option')?.addEventListener('click', function() {
+        if (confirm('¿Eliminar esta opción y sus franquicias?')) {
+            el.remove();
+        }
+    });
+    el.querySelectorAll('.remove-franchise').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.closest('.franchise-row').remove();
+        });
+    });
+    el.querySelector('.add-franchise')?.addEventListener('click', function() {
+        const idx = this.dataset.optionIndex;
+        const container = this.closest('.franchises-container');
+        const row = document.createElement('div');
+        row.className = 'input-group input-group-sm mb-1 franchise-row';
+        row.innerHTML = `
+            <input type="text" name="franchise_nom_${idx}[]" class="form-control" placeholder="Nombre de la franquicia">
+            <button type="button" class="btn btn-outline-danger remove-franchise"><i class="fas fa-times"></i></button>
+        `;
+        container.insertBefore(row, this);
+        row.querySelector('.remove-franchise').addEventListener('click', function() {
+            this.closest('.franchise-row').remove();
+        });
+    });
+}
+
+document.querySelectorAll('.option-group').forEach(attachEvents);
+</script>
+{% endblock %}

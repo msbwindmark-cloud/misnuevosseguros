@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Copia de Seguridad{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0"><i class="fas fa-database me-2"></i>Copia de Seguridad de la Base de Datos</h5>
+    </div>
+    <div class="card-body">
+      <form method="post" class="mb-4">
+        {% csrf_token %}
+        <button type="submit" name="action" value="backup" class="btn btn-success btn-lg">
+          <i class="fas fa-save me-1"></i>Crear Backup y Enviar por Email
+        </button>
+      </form>
+
+      {% if backup_file %}
+      <div class="alert alert-info">
+        <i class="fas fa-check-circle me-1"></i>Último archivo: <strong>{{ backup_file }}</strong>
+      </div>
+      {% endif %}
+
+      {% if log_lines %}
+      <hr>
+      <h6>Historial (últimas 20 líneas):</h6>
+      <pre class="bg-light p-3 rounded" style="max-height:300px;overflow-y:auto;font-size:0.8rem;">{% for line in log_lines %}{{ line }}
+{% endfor %}</pre>
+      {% endif %}
+
+      <hr>
+      <p class="text-muted small mb-0">
+        <i class="fas fa-info-circle"></i>
+        Los backups se guardan en <code>C:\copieSec\</code> y se envían automáticamente por email.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

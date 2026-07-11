@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Atestaciones{% endblock %}
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="fas fa-certificate me-2"></i>Atestaciones</h4>
+    <div>
+      <a href="{% url 'import_attestations_excel' %}" class="btn btn-success btn-sm"><i class="fas fa-file-import me-1"></i>Importar Excel</a>
+    </div>
+  </div>
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover table-striped table-sm mb-0" id="attestationsTable">
+          <thead class="table-dark">
+            <tr>
+              <th style="width:40px"><input type="checkbox" id="selectAll"></th>
+              <th>Tipo</th>
+              <th>Número</th>
+              <th>Activo</th>
+              <th>Creado</th>
+              <th style="width:120px">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in attestations %}
+            <tr>
+              <td><input type="checkbox" name="attestation_ids" value="{{ a.id }}" class="row-checkbox"></td>
+              <td>{{ a.id_type_attestation }}</td>
+              <td>{{ a.numero_attestation }}</td>
+              <td>{% if a.seleccionado %}<span class="badge bg-success">Sí</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
+              <td>{{ a.creado_el|date:"d/m/Y" }}</td>
+              <td>
+                <a href="{% url 'attestation_update' a.id %}" class="btn btn-warning btn-sm" title="Editar"><i class="fas fa-edit"></i></a>
+                <button class="btn btn-danger btn-sm btn-eliminar" data-id="{{ a.id }}" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center">No hay atestaciones registradas.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% if is_paginated %}
+  <nav class="mt-3"><ul class="pagination pagination-sm justify-content-center">
+    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>{% endif %}
+    <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Siguiente</a></li>{% endif %}
+  </ul></nav>
+  {% endif %}
+</div>
+
+<form id="deleteForm" method="post" action="{% url 'attestation_delete' %}">{% csrf_token %}<input type="hidden" name="ids" id="deleteIds"></form>
+
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.datatables.net/v/bs5/dt-1.11.5/datatables.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#attestationsTable').DataTable({
+        language: { url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/fr-fr.json' },
+        pageLength: 50,
+        order: [[4, 'desc']],
+        columnDefs: [{ orderable: false, targets: [0,5] }],
+        drawCallback: function() { $('#selectAll').prop('checked', false); }
+    });
+
+    $('#selectAll').on('click', function() {
+        $('.row-checkbox').prop('checked', this.checked);
+    });
+
+    $('.btn-eliminar').on('click', function() {
+        var id = $(this).data('id');
+        Swal.fire({
+            title: '¿Eliminar?',
+            text: 'Esta acción no se puede deshacer.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(result => {
+            if (result.isConfirmed) {
+                $('#deleteIds').val(id);
+                $('#deleteForm').submit();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

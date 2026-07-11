@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% block title %}Pólizas - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-file-invoice"></i> Lista de Pólizas</h4>
+        <div>
+            <a href="{% url 'poliza_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nueva</a>
+            <a href="{% url 'export_polizas_pdf' %}" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a>
+            <a href="{% url 'export_polizas_excel' %}" class="btn btn-info btn-sm"><i class="fas fa-file-excel"></i> Excel</a>
+            <a href="{% url 'poliza_create' %}" class="btn btn-light btn-sm"><i class="fas fa-arrow-left"></i> Formulaire</a>
+            <a href="{% url 'export_polizas_eliminadas_excel' %}" class="btn btn-outline-light btn-sm"><i class="fas fa-trash"></i> Eliminadas</a>
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalFactures"><i class="fas fa-file-invoice"></i> Factures</button>
+            <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalReleves"><i class="fas fa-file-excel"></i> Relevés</button>
+            {% if filtrando_docs %}
+            <a href="{% url 'poliza_list' %}" class="btn btn-info btn-sm"><i class="fas fa-times"></i> Tous</a>
+            {% else %}
+            <a href="{% url 'poliza_list' %}?con_docs=1" class="btn btn-outline-info btn-sm"><i class="fas fa-paperclip"></i> Avec documents</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row mb-3 g-2 align-items-end">
+            <div class="col-auto">
+                <label class="form-label mb-0">Date du</label>
+                <input type="date" class="form-control" name="fecha_desde" value="{{ fecha_desde }}">
+            </div>
+            <div class="col-auto">
+                <label class="form-label mb-0">Date au</label>
+                <input type="date" class="form-control" name="fecha_hasta" value="{{ fecha_hasta }}">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filtrer</button>
+            </div>
+            {% if filtrando_fechas %}
+            <div class="col-auto">
+                <a href="{% url 'poliza_list' %}" class="btn btn-outline-secondary">Tous</a>
+            </div>
+            {% endif %}
+            <div class="col-auto">
+                <a href="{% url 'export_polizas_excel' %}?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}" class="btn btn-info"><i class="fas fa-file-excel"></i> Excel (filtre)</a>
+            </div>
+        </form>
+        <div class="row mb-3">
+            <div class="col-8">
+                <a href="{% url 'envio_banco_create' %}" class="btn btn-warning"><i class="fas fa-exchange-alt"></i> Generar un virement</a>
+                <a href="{% url 'envio_banco_list' %}" class="btn btn-outline-warning btn-sm"><i class="fas fa-list"></i> Lista</a>
+                <a href="{% url 'courrier_create' %}" class="btn btn-primary"><i class="fas fa-envelope"></i> Generar un envoie courrier</a>
+                <a href="{% url 'courrier_list' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-list"></i> Lista</a>
+            </div>
+            <div class="col-4 text-end">
+                <a href="{% url 'poliza_create' %}" class="btn btn-warning"><i class="fas fa-file-invoice"></i> Formulaire production</a>
+                <a href="{% url 'sinistro_create' %}" class="btn btn-secondary"><i class="fas fa-car-crash"></i> Formulaire sinistre</a>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover datatable">
+                <thead>
+                    <tr>
+                        <th>Recibo</th>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Póliza</th>
+                        <th>Matrícula</th>
+                        <th>Asegurado</th>
+                        <th>Total</th>
+                        <th>Resto</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in polizas %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'poliza_detail' p.recu %}">{{ p.recu }}</a>
+                            {% if p.recu in polizas_con_docs %}
+                            <span class="badge bg-info" title="Tiene documentos adjuntos"><i class="fas fa-paperclip"></i></span>
+                            {% endif %}
+                        </td>
+                        <td>{{ p.fecha_hoy|date:"d/m/Y" }}</td>
+                        <td>{{ p.letype }}</td>
+                        <td>{{ p.police }}</td>
+                        <td>{{ p.matricule }}</td>
+                        <td>{{ p.assure|truncatechars:30 }}</td>
+                        <td>{{ p.totale }}</td>
+                        <td>{{ p.reste }}</td>
+                        <td class="text-nowrap">
+                            <a href="{% url 'poliza_update' p.recu %}" class="btn btn-warning btn-sm" title="Modificar"><i class="fas fa-edit"></i></a>
+                            <a href="{% url 'poliza_detail' p.recu %}" class="btn btn-info btn-sm" title="Detalle"><i class="fas fa-eye"></i></a>
+                            <a href="{% url 'generate_poliza_pdf_sans_entete' p.recu %}" class="btn btn-success btn-sm" target="_blank" title="PDF sin encabezado"><i class="fas fa-file-pdf"></i></a>
+                            <a href="{% url 'generate_poliza_pdf_with_header' p.recu %}" class="btn btn-primary btn-sm" target="_blank" title="PDF con encabezado"><i class="fas fa-file-pdf"></i></a>
+                            <a href="{% url 'invoice_by_receipt' p.recu %}" class="btn btn-secondary btn-sm" target="_blank" title="Factura"><i class="fas fa-file-invoice"></i></a>
+                            <a href="{% url 'statement_by_receipt_excel' p.recu %}" class="btn btn-warning btn-sm" target="_blank" title="Relevé Excel"><i class="fas fa-file-excel"></i></a>
+                            <a href="{% url 'add_document_to_poliza' p.recu %}" class="btn btn-primary btn-sm" title="Añadir Documento"><i class="fas fa-paperclip"></i></a>
+                            <a href="#" class="btn btn-danger btn-sm" onclick="confirmarEliminar({{ p.recu }})" title="Eliminar"><i class="fas fa-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="text-center">No hay pólizas</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-2">
+                <a href="{% url 'backup_view' %}" class="btn btn-primary"><i class="fas fa-database"></i> Sauvegarde de securité</a>
+            </div>
+            <div class="col-2">
+                <a href="{% url 'sinistro_list' %}" class="btn btn-warning"><i class="fas fa-list"></i> La liste des sinistres</a>
+            </div>
+            <div class="col-2">
+                <a href="{% url 'export_polizas_excel' %}" class="btn btn-danger"><i class="fas fa-file-excel"></i> La liste en excel</a>
+            </div>
+            <div class="col-2">
+                <a href="{% url 'export_polizas_eliminadas_excel' %}" class="btn btn-danger"><i class="fas fa-trash"></i> La liste des eliminés</a>
+            </div>
+            <div class="col-2">
+                <a href="{% url 'poliza_create' %}" class="btn btn-success"><i class="fas fa-sign-out-alt"></i> Salir</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Factures -->
+<div class="modal fade" id="modalFactures" tabindex="-1" aria-labelledby="modalFacturesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalFacturesLabel">Sélectionner un client pour imprimer ses factures</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="buscarClienteF" class="form-control mb-2" placeholder="Rechercher un client...">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="laListaClientesF">
+                        <thead>
+                            <tr>
+                                <th scope="col">CODE CLIENT</th>
+                                <th scope="col">NOM ASSURÉ</th>
+                                <th scope="col">STATUT</th>
+                                <th scope="col">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in clientes %}
+                            <tr>
+                                <td>{{ c.code_client }}</td>
+                                <td class="nom-client">{{ c.nom_client }}</td>
+                                <td>
+                                    {% if c.code_client|stringformat:"s" in clientes_con_poliza %}
+                                        <span class="badge bg-success">Facture</span>
+                                        <span class="badge bg-success">Relevé</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Aucun</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a class="btn btn-sm btn-secondary" href="{% url 'invoice_list_by_client' c.code_client %}"><i class="fas fa-file-invoice"></i> Factures</a>
+                                    <a class="btn btn-sm btn-danger" href="{% url 'invoice_by_client' c.code_client %}"><i class="fas fa-file-pdf"></i> PDF</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center">Aucun client</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Relevés -->
+<div class="modal fade" id="modalReleves" tabindex="-1" aria-labelledby="modalRelevesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalRelevesLabel">Sélectionner un client pour imprimer ses relevés</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="buscarClienteR" class="form-control mb-2" placeholder="Rechercher un client...">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="laListaClientesR">
+                        <thead>
+                            <tr>
+                                <th scope="col">CODE CLIENT</th>
+                                <th scope="col">NOM ASSURÉ</th>
+                                <th scope="col">STATUT</th>
+                                <th scope="col">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in clientes %}
+                            <tr>
+                                <td>{{ c.code_client }}</td>
+                                <td class="nom-client">{{ c.nom_client }}</td>
+                                <td>
+                                    {% if c.code_client|stringformat:"s" in clientes_con_poliza %}
+                                        <span class="badge bg-success">Facture</span>
+                                        <span class="badge bg-success">Relevé</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Aucun</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a class="btn btn-sm btn-warning" href="{% url 'statement_list_by_client' c.code_client %}"><i class="fas fa-file-excel"></i> Relevés</a>
+                                    <a class="btn btn-sm btn-warning" href="{% url 'statement_by_client' c.code_client %}"><i class="fas fa-file-pdf"></i> PDF</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center">Aucun client</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    function filtrarTablaModal(inputId, tablaId) {
+        var filtro = document.getElementById(inputId).value.toLowerCase();
+        var filas = document.querySelectorAll('#' + tablaId + ' tbody tr');
+        filas.forEach(function (fila) {
+            if (fila.querySelectorAll('td').length < 2) return;
+            var texto = fila.querySelector('.nom-client').textContent.toLowerCase() + ' ' +
+                        fila.querySelector('td').textContent.toLowerCase();
+            fila.style.display = texto.indexOf(filtro) > -1 ? '' : 'none';
+        });
+    }
+    document.getElementById('buscarClienteF').addEventListener('keyup', function () {
+        filtrarTablaModal('buscarClienteF', 'laListaClientesF');
+    });
+    document.getElementById('buscarClienteR').addEventListener('keyup', function () {
+        filtrarTablaModal('buscarClienteR', 'laListaClientesR');
+    });
+    if (window.location.hash === '#factures') {
+        var mf = new bootstrap.Modal(document.getElementById('modalFactures'));
+        mf.show();
+    } else if (window.location.hash === '#releves') {
+        var mr = new bootstrap.Modal(document.getElementById('modalReleves'));
+        mr.show();
+    }
+    function confirmarEliminar(recu) {
+        Swal.fire({
+            title: '¿Eliminar póliza?',
+            text: 'Esta acción moverá la póliza a la lista de eliminadas',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{% url "poliza_list_delete" %}';
+                var csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = 'csrfmiddlewaretoken';
+                csrf.value = '{{ csrf_token }}';
+                form.appendChild(csrf);
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'pk';
+                input.value = recu;
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Añadir Documentos{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0"><i class="fas fa-file-upload me-2"></i>Añadir Documentos a una Póliza</h5>
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Póliza (Recibo nº)</label>
+            <div class="input-group">
+              <input type="number" name="recu" id="recu_input" class="form-control" value="{{ poliza.recu|default:'' }}" required placeholder="Recibo nº" readonly>
+              <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#polizaModal">
+                <i class="fas fa-search"></i> Seleccionar
+              </button>
+            </div>
+            <div id="cliente_info" class="mt-1 small text-muted">
+              {% if poliza %}{{ poliza.assure }} {{ poliza.prenom }} — {{ poliza.police }}{% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Tipo de documento</label>
+            <select name="tipo_documento" class="form-select">
+              <option value="">-- Sin tipo --</option>
+              {% for t in tipos %}
+              <option value="{{ t.id }}">{{ t.tipo_documento }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Archivos</label>
+          <input type="file" name="archivos" class="form-control" multiple required>
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-upload me-1"></i>Subir</button>
+        {% if poliza %}
+        <a href="{% url 'poliza_detail' poliza.recu %}" class="btn btn-secondary">Volver a la póliza</a>
+        {% endif %}
+      </form>
+
+      {% if poliza %}
+      <hr>
+      <h6>Documentos de la póliza nº {{ poliza.recu }} — {{ poliza.assure }} {{ poliza.prenom }}</h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped datatable">
+          <thead><tr><th>#</th><th>Archivo</th><th>Tipo</th><th>Tamaño</th><th>Subido</th></tr></thead>
+          <tbody>
+            {% for d in documentos %}
+            <tr>
+              <td>{{ d.id }}</td>
+              <td>{% if d.archivo %}<a href="{{ d.archivo.url }}" target="_blank">{{ d.nombre_documento_usuario }}</a>{% else %}{{ d.nombre_documento_usuario }}{% endif %}</td>
+              <td>{{ d.tipo_documento }}</td>
+              <td>{% if d.tamanio_documento_usuario %}{{ d.tamanio_documento_usuario|filesizeformat }}{% endif %}</td>
+              <td>{{ d.creado_el|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center">Sin documentos</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal Seleccionar Póliza -->
+<div class="modal fade" id="polizaModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title"><i class="fas fa-file-invoice"></i> Seleccionar Póliza</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-hover datatable" id="tablaPolizas">
+          <thead>
+            <tr><th>Recibo</th><th>Asegurado</th><th>Póliza</th><th>Producto</th></tr>
+          </thead>
+          <tbody>
+            {% for p in polizas %}
+            <tr class="seleccionar-poliza" data-recu="{{ p.recu }}" data-cliente="{{ p.assure }} {{ p.prenom }}" data-police="{{ p.police }}" style="cursor:pointer">
+              <td>{{ p.recu }}</td>
+              <td>{{ p.assure }} {{ p.prenom }}</td>
+              <td>{{ p.police }}</td>
+              <td>{{ p.producto }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('click', function(e) {
+  const row = e.target.closest('.seleccionar-poliza');
+  if (!row) return;
+  const recu = row.dataset.recu;
+  const cliente = row.dataset.cliente;
+  const police = row.dataset.police;
+  document.getElementById('recu_input').value = recu;
+  document.getElementById('cliente_info').textContent = cliente + ' — ' + police;
+  const modal = bootstrap.Modal.getInstance(document.getElementById('polizaModal'));
+  if (modal) modal.hide();
+});
+</script>
+{% endblock %}

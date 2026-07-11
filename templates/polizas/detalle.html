@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Póliza {{ poliza.recu }} - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between">
+        <h4 class="mb-0"><i class="fas fa-file-invoice"></i> Póliza nº {{ poliza.recu }}</h4>
+        <div>
+            <a href="{% url 'poliza_update' poliza.recu %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Editar</a>
+            <a href="{% url 'generate_poliza_pdf' poliza.recu %}" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a>
+            <a href="{% url 'generate_poliza_pdf_sans_entete' poliza.recu %}" class="btn btn-success btn-sm"><i class="fas fa-file-pdf"></i> Sin encabezado</a>
+            <a href="{% url 'invoice_by_receipt' poliza.recu %}" class="btn btn-secondary btn-sm"><i class="fas fa-file-invoice"></i> Factura</a>
+            <a href="{% url 'statement_by_receipt' poliza.recu %}" class="btn btn-warning btn-sm"><i class="fas fa-file-invoice-dollar"></i> Relevé</a>
+            <a href="{% url 'add_document_to_poliza' poliza.recu %}" class="btn btn-primary btn-sm"><i class="fas fa-paperclip"></i> Docs</a>
+            <a href="{% url 'poliza_list' %}" class="btn btn-light btn-sm">Volver</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-borderless">
+                    <tr><th>Fecha:</th><td>{{ poliza.fecha_hoy|date:"d/m/Y" }}</td></tr>
+                    <tr><th>Tipo:</th><td>{{ poliza.letype }}</td></tr>
+                    <tr><th>Atestación:</th><td>{{ poliza.attestation }}</td></tr>
+                    <tr><th>Póliza:</th><td>{{ poliza.police }}</td></tr>
+                    <tr><th>Marca:</th><td>{{ poliza.marque }}</td></tr>
+                    <tr><th>Matrícula:</th><td>{{ poliza.matricule }}</td></tr>
+                    <tr><th>Producto:</th><td>{{ poliza.produit }}</td></tr>
+                    <tr><th>Designación:</th><td>{{ poliza.designation }}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-borderless">
+                    <tr><th>Asegurado:</th><td>{{ poliza.assure }}</td></tr>
+                    <tr><th>Desde:</th><td>{{ poliza.du|date:"d/m/Y" }}</td></tr>
+                    <tr><th>Hasta:</th><td>{{ poliza.au|date:"d/m/Y" }}</td></tr>
+                    <tr><th>Total:</th><td>{{ poliza.totale }} MAD</td></tr>
+                    <tr><th>Efectivo:</th><td>{{ poliza.espece }} MAD</td></tr>
+                    <tr><th>Cheque:</th><td>{{ poliza.cheque }} MAD</td></tr>
+                    <tr><th>Transferencia:</th><td>{{ poliza.virement }} MAD</td></tr>
+                    <tr><th>Resto:</th><td><strong>{{ poliza.reste }} MAD</strong></td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if garantias_data %}
+<div class="card mt-3">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Garantías</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+        {% for g in garantias_data %}
+            <div class="col-md-4 mb-2">
+                <strong>{{ g.nom }}</strong>
+                {% if g.valeur %}<br><small>Montant: {{ g.valeur }} MAD</small>{% endif %}
+                {% if g.option %}
+                    <br><small>Opción: {{ g.option.nom }}</small>
+                    {% if g.option.valeur %}<br><small>Valor opción: {{ g.option.valeur }} MAD</small>{% endif %}
+                {% endif %}
+                {% if g.franchise %}
+                    <br><small>Franquicia: {{ g.franchise.nom }}</small>
+                    {% if g.franchise.montant %}<br><small>Monto franquicia: {{ g.franchise.montant }} MAD</small>{% endif %}
+                {% endif %}
+            </div>
+        {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
