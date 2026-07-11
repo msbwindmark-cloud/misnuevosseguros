@@ -16,4 +16,5 @@ urlpatterns = [
     path('backup/', views.backup_view, name='backup_view'),
     path('check-expiring/', views.check_expiring_ajax, name='check_expiring_ajax'),
     path('escanear-qr/', views.escanear_qr, name='escanear_qr'),
+    path('api/ciudades-salat/', views.ciudades_salat_api, name='ciudades_salat_api'),
 ]

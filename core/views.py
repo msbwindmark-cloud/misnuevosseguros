@@ -531,3 +531,18 @@ def export_cliente_pdf(request, pk):
 @staff_member_required
 def escanear_qr(request):
     return render(request, 'core/escanear_qr.html')
+
+
+def ciudades_salat_api(request):
+    from django.http import JsonResponse
+    from .models import CiudadSalat
+    ciudades = CiudadSalat.objects.filter(activa=True).order_by('orden')
+    grupos = {}
+    for c in ciudades:
+        grupos.setdefault(c.grupo, []).append({
+            'nombre': c.nombre,
+            'ciudad_api': c.ciudad_api,
+            'pais_api': c.pais_api,
+            'metodo': c.metodo,
+        })
+    return JsonResponse({'grupos': grupos})
