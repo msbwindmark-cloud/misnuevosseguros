@@ -31,6 +31,12 @@ $(document).ready(function() {
         'Seville': 'Sevilla', 'Madrid': 'Madrid', 'Barcelona': 'Barcelona',
         'Malaga': 'Málaga', 'Granada': 'Granada'
     };
+    // Etiquetas mostradas en el aviso y horas guardadas en memoria
+    var SALAT_LABELS = { Fajr: 'Fajr', Dhuhr: 'Duhr', Asr: 'Asr', Maghrib: 'Maghrib', Isha: 'Isha' };
+    var salatTimings = {};              // { Fajr: '05:12', Dhuhr: '13:40', ... }
+    var salatNotificados = {};          // evita repetir el mismo aviso
+    var SALAT_AVISO_MIN = 10;           // minutos de antelación para el pre-aviso
+
     function cargarSalat(ciudad, pais) {
         var nombreEl = document.getElementById('salat-ciudad-nombre');
         if (nombreEl) nombreEl.textContent = CIUDADES_DISPLAY[ciudad] || ciudad;
@@ -47,14 +53,63 @@ $(document).ready(function() {
                 if (data && data.data && data.data.timings) {
                     var t = data.data.timings;
                     var map = { Fajr: 'salat-fajr', Dhuhr: 'salat-duhr', Asr: 'salat-asr', Maghrib: 'salat-maghrib', Isha: 'salat-isha' };
+                    salatTimings = {};
                     Object.keys(map).forEach(function (k) {
+                        var valor = (t[k] || '—').replace(' (MA)', '').replace(' (EET)', '').trim();
                         var el = document.getElementById(map[k]);
-                        if (el) el.textContent = (t[k] || '—').replace(' (MA)', '').replace(' (EET)', '');
+                        if (el) el.textContent = valor;
+                        var hhmm = valor.match(/(\d{1,2}):(\d{2})/);
+                        if (hhmm) salatTimings[k] = hhmm[1] + ':' + hhmm[2];
                     });
+                    comprobarSalat();  // comprobar de inmediato tras cargar
                 }
             })
             .catch(function () { /* sin conexión: se quedan en "—" */ });
     }
+
+    // Muestra un toast de 30 s (una sola vez por evento/día)
+    function notificarSalat(clave, icon, titulo) {
+        if (salatNotificados[clave]) return;
+        salatNotificados[clave] = true;
+        if (typeof Swal === 'undefined') return;
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: icon,
+            title: titulo,
+            showConfirmButton: false,
+            timer: 30000,
+            timerProgressBar: true,
+            didOpen: function (toast) {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            }
+        });
+    }
+
+    // Comprueba si se acerca o llega la hora de alguna salat
+    function comprobarSalat() {
+        if (!salatTimings) return;
+        var now = new Date();
+        var p2 = function (n) { return ('0' + n).slice(-2); };
+        var fechaKey = now.getFullYear() + '-' + p2(now.getMonth() + 1) + '-' + p2(now.getDate());
+        var minsAhora = now.getHours() * 60 + now.getMinutes();
+        Object.keys(salatTimings).forEach(function (k) {
+            var partes = salatTimings[k].split(':');
+            var minsSalat = parseInt(partes[0], 10) * 60 + parseInt(partes[1], 10);
+            var diff = minsSalat - minsAhora;
+            var nombre = SALAT_LABELS[k] || k;
+            if (diff === SALAT_AVISO_MIN) {
+                notificarSalat(fechaKey + '|' + k + '|aviso', 'warning',
+                    'Se acerca la Salat de ' + nombre + ' (en ' + SALAT_AVISO_MIN + ' min)');
+            }
+            if (diff === 0) {
+                notificarSalat(fechaKey + '|' + k + '|hora', 'info',
+                    'Es la hora de la Salat de ' + nombre);
+            }
+        });
+    }
+    setInterval(comprobarSalat, 20000);
 
     var selSalat = document.getElementById('salat-ciudad');
     if (selSalat) {
