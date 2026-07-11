@@ -11,6 +11,7 @@ from django.utils.decorators import method_decorator
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.db.models import Count
 from .models import Poliza, PolizaGarantia, PolizaGarantiaOption, PolizaGarantiaFranchise
 from garantias.models import Garantia, GarantiaOption, GarantiaFranchise
 from clientes.models import Cliente
@@ -44,6 +45,8 @@ class PolizaListView(ListView):
         from documentos.models import DocumentoUsuario
         doc_ids = set(DocumentoUsuario.objects.filter(id_usuario__in=recus).values_list('id_usuario', flat=True).distinct())
         ctx['polizas_con_docs'] = doc_ids
+        docs_count = DocumentoUsuario.objects.filter(id_usuario__in=recus).values('id_usuario').annotate(total=Count('id')).values_list('id_usuario', 'total')
+        ctx['docs_count'] = {r: t for r, t in docs_count}
         ctx['filtrando_docs'] = self.request.GET.get('con_docs') == '1'
         ctx['fecha_desde'] = self.request.GET.get('fecha_desde', '')
         ctx['fecha_hasta'] = self.request.GET.get('fecha_hasta', '')
@@ -147,7 +150,8 @@ class PolizaCreateView(View):
                 errors[field] = 'Ce champ est obligatoire'
         if not data.get('doc_obligatorios'):
             tiene_doc = any(len(files.getlist(k)) > 0 for k in files if k.startswith('archivos_modal_'))
-            if not tiene_doc:
+            tiene_reutilizados = len(data.getlist('docs_reutilizados')) > 0
+            if not tiene_doc and not tiene_reutilizados:
                 errors['documentos'] = 'Vous devez joindre au moins un document pour enregistrer la póliza.'
 
         try:
@@ -293,6 +297,21 @@ class PolizaCreateView(View):
                 )
                 doc.save()
 
+        for doc_id in data.getlist('docs_reutilizados'):
+            try:
+                orig = DocumentoUsuario.objects.get(pk=int(doc_id))
+            except (DocumentoUsuario.DoesNotExist, ValueError):
+                continue
+            DocumentoUsuario.objects.create(
+                id_usuario=poliza.recu,
+                nombre_documento_usuario=orig.nombre_documento_usuario,
+                tipo_documento_usuario=orig.tipo_documento_usuario,
+                tamanio_documento_usuario=orig.tamanio_documento_usuario,
+                tipo_documento=orig.tipo_documento,
+                archivo=orig.archivo.name if orig.archivo else '',
+                id_documento_usuario_origen=orig.id,
+            )
+
         messages.success(request, f'Póliza nº {poliza.recu} creada correctamente.')
         return redirect(f"{reverse('poliza_create')}?saved={poliza.recu}")
 
@@ -400,6 +419,24 @@ def get_polizas_json(request):
     return JsonResponse(data, safe=False)
 
 
+def poliza_docs_by_police(request):
+    police = request.GET.get('police', '').strip()
+    if not police:
+        return JsonResponse([], safe=False)
+    recus = list(Poliza.objects.filter(police=police).values_list('recu', flat=True))
+    docs = (DocumentoUsuario.objects
+            .filter(id_usuario__in=recus)
+            .select_related('tipo_documento')
+            .order_by('-id'))
+    data = [{
+        'id': d.id,
+        'nombre': d.nombre_documento_usuario or '',
+        'tipo': d.tipo_documento.tipo_documento if d.tipo_documento else 'Sin tipo',
+        'url': d.archivo.url if d.archivo else '',
+    } for d in docs]
+    return JsonResponse(data, safe=False)
+
+
 class PolizaUpdateView(View):
     template_name = 'polizas/form.html'
 
@@ -460,6 +497,37 @@ class PolizaUpdateView(View):
         poliza.reste = reste
         poliza.mode_paiment = mode_paiment
         poliza.save()
+
+        tipos_doc_up = data.getlist('tipo_doc_modal[]')
+        for idx, id_tipo in enumerate(tipos_doc_up):
+            if not id_tipo:
+                continue
+            file_key = f'archivos_modal_{idx}'
+            archivos = request.FILES.getlist(file_key)
+            for f in archivos:
+                DocumentoUsuario.objects.create(
+                    id_usuario=poliza.recu,
+                    nombre_documento_usuario=f.name,
+                    tipo_documento_usuario=f.name.split('.')[-1].lower() if '.' in f.name else '',
+                    tamanio_documento_usuario=f.size,
+                    tipo_documento_id=int(id_tipo) if id_tipo.isdigit() else None,
+                    archivo=f,
+                )
+        for doc_id in data.getlist('docs_reutilizados'):
+            try:
+                orig = DocumentoUsuario.objects.get(pk=int(doc_id))
+            except (DocumentoUsuario.DoesNotExist, ValueError):
+                continue
+            DocumentoUsuario.objects.create(
+                id_usuario=poliza.recu,
+                nombre_documento_usuario=orig.nombre_documento_usuario,
+                tipo_documento_usuario=orig.tipo_documento_usuario,
+                tamanio_documento_usuario=orig.tamanio_documento_usuario,
+                tipo_documento=orig.tipo_documento,
+                archivo=orig.archivo.name if orig.archivo else '',
+                id_documento_usuario_origen=orig.id,
+            )
+
         poliza.garantias.all().delete()
         poliza.garantias_options.all().delete()
         poliza.garantias_franquicias.all().delete()
@@ -521,5 +589,61 @@ def poliza_garantias_data(request, pk):
 
 def poliza_documents_data(request, pk):
     from documentos.models import DocumentoUsuario
-    docs = DocumentoUsuario.objects.filter(recu_usuario=pk).values('id', 'nombre_usuario', 'tipo_documento__nombre', 'recu_usuario', 'fecha_subida')
-    return JsonResponse({'documentos': list(docs)})
+    docs = DocumentoUsuario.objects.filter(id_usuario=pk).order_by('-creado_el')
+    data = []
+    for d in docs:
+        data.append({
+            'id': d.id,
+            'nombre': d.nombre_documento_usuario,
+            'tipo': d.tipo_documento.nombre if d.tipo_documento else (d.tipo_documento_usuario or '—'),
+            'tamanio': d.tamanio_documento_usuario,
+            'fecha': d.creado_el.strftime('%d/%m/%Y %H:%M') if d.creado_el else '',
+            'archivo': d.archivo.url if d.archivo else '',
+            'origen': d.id_documento_usuario_origen,
+            'heredado': bool(d.id_documento_usuario_origen),
+        })
+    return JsonResponse({'documentos': data})
+
+
+@staff_member_required
+def poliza_documentos_agregar(request, pk):
+    from documentos.models import DocumentoUsuario
+    poliza = get_object_or_404(Poliza, pk=pk)
+    if request.method == 'POST':
+        data = request.POST
+        files = request.FILES
+        count = 0
+        tipos_doc = data.getlist('tipo_doc_modal[]')
+        for idx, id_tipo in enumerate(tipos_doc):
+            if not id_tipo:
+                continue
+            file_key = f'archivos_modal_{idx}'
+            archivos = files.getlist(file_key)
+            for f in archivos:
+                DocumentoUsuario.objects.create(
+                    id_usuario=poliza.recu,
+                    nombre_documento_usuario=f.name,
+                    tipo_documento_usuario=f.name.split('.')[-1].lower() if '.' in f.name else '',
+                    tamanio_documento_usuario=f.size,
+                    tipo_documento_id=int(id_tipo) if id_tipo.isdigit() else None,
+                    archivo=f,
+                )
+                count += 1
+        for doc_id in data.getlist('docs_reutilizados'):
+            try:
+                orig = DocumentoUsuario.objects.get(pk=int(doc_id))
+            except (DocumentoUsuario.DoesNotExist, ValueError):
+                continue
+            DocumentoUsuario.objects.create(
+                id_usuario=poliza.recu,
+                nombre_documento_usuario=orig.nombre_documento_usuario,
+                tipo_documento_usuario=orig.tipo_documento_usuario,
+                tamanio_documento_usuario=orig.tamanio_documento_usuario,
+                tipo_documento=orig.tipo_documento,
+                archivo=orig.archivo.name if orig.archivo else '',
+                id_documento_usuario_origen=orig.id,
+            )
+            count += 1
+        messages.success(request, f'{count} documento(s) añadido(s) a la póliza nº {poliza.recu}')
+        return redirect('poliza_list')
+    return redirect('poliza_list')

@@ -41,9 +41,9 @@ class DocumentDeBase(models.Model):
 class Sinistro(models.Model):
     code_sinistre = models.CharField(max_length=100, blank=True, null=True, verbose_name='Código siniestro')
     ref_sinistre = models.CharField(max_length=100, blank=True, null=True, verbose_name='Ref. siniestro')
-    date_operation = models.DateField(verbose_name='Fecha de operación')
-    date_sinistre = models.DateField(verbose_name='Fecha del siniestro')
-    date_reception = models.DateField(verbose_name='Fecha de recepción')
+    date_operation = models.DateField(verbose_name='Fecha de operación', null=True, blank=True)
+    date_sinistre = models.DateField(verbose_name='Fecha del siniestro', null=True, blank=True)
+    date_reception = models.DateField(verbose_name='Fecha de recepción', null=True, blank=True)
     police = models.CharField(max_length=100, verbose_name='Póliza')
     nom_formule = models.CharField(max_length=100, blank=True, null=True, verbose_name='Fórmula')
     assure = models.CharField(max_length=100, verbose_name='Asegurado')

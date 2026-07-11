@@ -8,7 +8,7 @@
       <h5 class="mb-0"><i class="fas fa-file-upload me-2"></i>Añadir Documentos a una Póliza</h5>
     </div>
     <div class="card-body">
-      <form method="post" enctype="multipart/form-data">
+      <form id="formDocs" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="row mb-3">
           <div class="col-md-6">
@@ -23,31 +23,46 @@
               {% if poliza %}{{ poliza.assure }} {{ poliza.prenom }} — {{ poliza.police }}{% endif %}
             </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label">Tipo de documento</label>
-            <select name="tipo_documento" class="form-select">
-              <option value="">-- Sin tipo --</option>
-              {% for t in tipos %}
-              <option value="{{ t.id }}">{{ t.tipo_documento }}</option>
-              {% endfor %}
-            </select>
+        </div>
+
+        <h6 class="text-muted"><i class="fas fa-plus"></i> Documents à ajouter</h6>
+        <div id="contenedor-filas-docs">
+          <div class="row mb-3 fila-doc">
+            <div class="col-md-4">
+              <label class="form-label small">Tipo de documento</label>
+              <select name="tipo_doc_modal[]" class="form-select" required>
+                <option value="">-- Seleccioner un type --</option>
+                {% for t in tipos %}
+                <option value="{{ t.id }}">{{ t.tipo_documento }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small">Archivos</label>
+              <input type="file" name="archivos_modal_0" class="form-control" multiple required>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+              <button type="button" class="btn btn-danger btn-sm" onclick="eliminarFila(this)"><i class="fa fa-trash"></i></button>
+            </div>
           </div>
         </div>
-        <div class="mb-3">
-          <label class="form-label">Archivos</label>
-          <input type="file" name="archivos" class="form-control" multiple required>
+        <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="nuevaFila()">+ Añadir otra categoría</button>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary" id="btnSubir"><i class="fas fa-upload me-1"></i>Subir</button>
+          {% if poliza %}
+          <a href="{% url 'add_document_to_poliza' poliza.recu %}" class="btn btn-secondary">Recharger</a>
+          {% endif %}
         </div>
-        <button type="submit" class="btn btn-primary"><i class="fas fa-upload me-1"></i>Subir</button>
-        {% if poliza %}
-        <a href="{% url 'poliza_detail' poliza.recu %}" class="btn btn-secondary">Volver a la póliza</a>
-        {% endif %}
       </form>
+
+      <div id="msgResultado" class="mt-3" style="display:none;"></div>
 
       {% if poliza %}
       <hr>
       <h6>Documentos de la póliza nº {{ poliza.recu }} — {{ poliza.assure }} {{ poliza.prenom }}</h6>
       <div class="table-responsive">
-        <table class="table table-sm table-striped datatable">
+        <table class="table table-sm table-striped datatable" id="tablaDocumentos">
           <thead><tr><th>#</th><th>Archivo</th><th>Tipo</th><th>Tamaño</th><th>Subido</th></tr></thead>
           <tbody>
             {% for d in documentos %}
@@ -78,7 +93,8 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <table class="table table-hover datatable" id="tablaPolizas">
+        <input type="text" id="buscarPoliza" class="form-control mb-3" placeholder="Buscar por police, asegurado..." oninput="filtrarPolizas()">
+        <table class="table table-hover" id="tablaPolizasModal">
           <thead>
             <tr><th>Recibo</th><th>Asegurado</th><th>Póliza</th><th>Producto</th></tr>
           </thead>
@@ -101,16 +117,88 @@
 
 {% block extra_js %}
 <script>
+var filaIndex = 1;
+
+function nuevaFila() {
+    var container = document.getElementById('contenedor-filas-docs');
+    var first = container.querySelector('.fila-doc');
+    var clone = first.cloneNode(true);
+    clone.querySelector('select').value = '';
+    clone.querySelector('input[type="file"]').value = '';
+    clone.querySelector('input[type="file"]').name = 'archivos_modal_' + filaIndex;
+    container.appendChild(clone);
+    filaIndex++;
+}
+
+function eliminarFila(btn) {
+    var container = document.getElementById('contenedor-filas-docs');
+    if (container.querySelectorAll('.fila-doc').length > 1) btn.closest('.fila-doc').remove();
+    else alert('Debe quedar al menos una categoría.');
+}
+
 document.addEventListener('click', function(e) {
-  const row = e.target.closest('.seleccionar-poliza');
-  if (!row) return;
-  const recu = row.dataset.recu;
-  const cliente = row.dataset.cliente;
-  const police = row.dataset.police;
-  document.getElementById('recu_input').value = recu;
-  document.getElementById('cliente_info').textContent = cliente + ' — ' + police;
-  const modal = bootstrap.Modal.getInstance(document.getElementById('polizaModal'));
-  if (modal) modal.hide();
+    var row = e.target.closest('.seleccionar-poliza');
+    if (!row) return;
+    document.getElementById('recu_input').value = row.dataset.recu;
+    document.getElementById('cliente_info').textContent = row.dataset.cliente + ' — ' + row.dataset.police;
+    var modal = bootstrap.Modal.getInstance(document.getElementById('polizaModal'));
+    if (modal) modal.hide();
+});
+
+function filtrarPolizas() {
+    var filtro = document.getElementById('buscarPoliza').value.toLowerCase();
+    document.querySelectorAll('#tablaPolizasModal tbody tr').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().indexOf(filtro) > -1 ? '' : 'none';
+    });
+}
+
+document.getElementById('formDocs').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var recu = document.getElementById('recu_input').value;
+    if (!recu) { alert('Selecciona una póliza primero.'); return; }
+    var filas = document.querySelectorAll('.fila-doc');
+    var tieneArchivos = false;
+    filas.forEach(function(f) {
+        if (f.querySelector('input[type="file"]').files.length > 0) tieneArchivos = true;
+    });
+    if (!tieneArchivos) { alert('Selecciona al menos un archivo.'); return; }
+
+    var btn = document.getElementById('btnSubir');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
+
+    var formData = new FormData(this);
+    formData.set('recu', recu);
+
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-upload me-1"></i>Subir';
+        var msg = document.getElementById('msgResultado');
+        if (data.ok) {
+            msg.className = 'alert alert-success';
+            msg.innerHTML = '<i class="fas fa-check-circle"></i> ' + data.count + ' documento(s) añadido(s) al recu nº ' + data.recu;
+            msg.style.display = 'block';
+            setTimeout(function() { window.location.href = window.location.pathname; }, 1500);
+        } else {
+            msg.className = 'alert alert-danger';
+            msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error al subir documentos.';
+            msg.style.display = 'block';
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-upload me-1"></i>Subir';
+        var msg = document.getElementById('msgResultado');
+        msg.className = 'alert alert-danger';
+        msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error de conexión.';
+        msg.style.display = 'block';
+    });
 });
 </script>
 {% endblock %}

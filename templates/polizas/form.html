@@ -179,6 +179,12 @@
 <div class="modal fade" id="modalDocumentos" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
     <div class="modal-header bg-dark text-white"><h5 class="modal-title">Adjunter plusieurs documents</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
+        <h6 class="text-muted"><i class="fas fa-copy"></i> Documents de la police existante (cocher pour les associer au nouveau reçu)</h6>
+        <div id="lista-docs-poliza" class="row mb-3">
+            <p class="text-muted small mb-0">Sélectionnez d'abord une police pour voir ses documents.</p>
+        </div>
+        <hr>
+        <h6 class="text-muted"><i class="fas fa-plus"></i> Ajouter de nouveaux documents</h6>
         <div id="contenedor-filas-docs">
             <div class="row mb-3 fila-doc">
                 <div class="col-md-5">
@@ -534,8 +540,43 @@ function nuevaFilaDoc() {
 function eliminarFilaDoc(btn) {
     const container = document.getElementById('contenedor-filas-docs');
     if (container.querySelectorAll('.fila-doc').length > 1) btn.closest('.fila-doc').remove();
-    else alert('Debes dejar al menos una categoría.');
+    else alert('Debes dejar au moins une catégorie.');
 }
+function cargarDocsPoliza() {
+    const cont = document.getElementById('lista-docs-poliza');
+    const police = document.getElementById('id_police').value.trim();
+    if (!police) {
+        cont.innerHTML = '<p class="text-muted small mb-0">Sélectionnez d\'abord une police pour voir ses documents.</p>';
+        return;
+    }
+    cont.innerHTML = '<div class="text-center w-100"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
+    fetch('{% url "poliza_docs_by_police" %}?police=' + encodeURIComponent(police))
+        .then(r => r.json())
+        .then(data => {
+            if (!data.length) {
+                cont.innerHTML = '<p class="text-muted small mb-0">Cette police n\'a pas de documents. Ajoutez-en de nouveaux ci-dessous.</p>';
+                return;
+            }
+            let html = '';
+            data.forEach(doc => {
+                const nombre = (doc.nombre || '').replace(/</g, '&lt;');
+                const tipo = (doc.tipo || '').replace(/</g, '&lt;');
+                const link = doc.url ? '<a href="' + doc.url + '" target="_blank" class="ms-1" title="Voir"><i class="fas fa-external-link-alt"></i></a>' : '';
+                html += '<div class="col-md-6 mb-2"><div class="card card-body p-2 shadow-sm">' +
+                    '<div class="form-check">' +
+                    '<input class="form-check-input" type="checkbox" name="docs_reutilizados" value="' + doc.id + '" id="docidx_' + doc.id + '">' +
+                    '<label class="form-check-label text-truncate" for="docidx_' + doc.id + '" style="max-width:90%">' +
+                    '<strong>' + tipo + '</strong><br><small class="text-muted">' + nombre + '</small>' +
+                    '</label>' + link +
+                    '</div></div></div>';
+            });
+            cont.innerHTML = html;
+        })
+        .catch(() => {
+            cont.innerHTML = '<p class="text-danger small mb-0">Erreur lors du chargement des documents.</p>';
+        });
+}
+document.getElementById('modalDocumentos')?.addEventListener('shown.bs.modal', cargarDocsPoliza);
 cargarClientes('');
 cargarAttestations('');
 cargarPolizas('');

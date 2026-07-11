@@ -1,8 +1,10 @@
 import json, os
 from datetime import datetime
+from django.db.models import Count
 from django.urls import reverse_lazy
 from django.http import JsonResponse, HttpResponse
 from django.views.generic import ListView, View
+from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import Sinistro, DocumentoSinistro, Formule, ReferenceReglement, DocumentDeBase
@@ -19,10 +21,8 @@ class SinistroListView(ListView):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        from documentos.models import DocumentoUsuario
         if self.request.GET.get('con_docs') == '1':
-            doc_ids = set(DocumentoUsuario.objects.values_list('id_usuario', flat=True).distinct())
-            qs = qs.filter(id__in=doc_ids)
+            qs = qs.filter(documentos__isnull=False).distinct()
         return qs
 
     def get_context_data(self, **kwargs):
@@ -31,7 +31,10 @@ class SinistroListView(ListView):
         from documentos.models import DocumentoUsuario
         doc_ids = set(DocumentoUsuario.objects.filter(id_usuario__in=ids).values_list('id_usuario', flat=True).distinct())
         ctx['siniestros_con_docs'] = doc_ids
+        doc_count_qs = DocumentoSinistro.objects.filter(sinistro_id__in=ids).values('sinistro_id').annotate(total=Count('id')).values_list('sinistro_id', 'total')
+        ctx['sinistro_docs_count'] = {r: t for r, t in doc_count_qs}
         ctx['filtrando_docs'] = self.request.GET.get('con_docs') == '1'
+        ctx['tipos_doc'] = TipoDocumento.objects.all()
         return ctx
 
 
@@ -168,6 +171,72 @@ def get_poliza_documentos(request, pk):
     return JsonResponse(data, safe=False)
 
 
+def sinistro_documentos_data(request, pk):
+    sinistro = get_object_or_404(Sinistro, pk=pk)
+    docs = DocumentoSinistro.objects.filter(sinistro=sinistro).order_by('-id')
+    data = [{
+        'id': d.id,
+        'nombre': d.nombre_archivo or '',
+        'tipo': str(d.tipo_documento) if d.tipo_documento else '—',
+        'archivo': d.archivo.url if d.archivo else '',
+        'origen': d.id_documento_usuario_origen,
+        'heredado': bool(d.id_documento_usuario_origen),
+    } for d in docs]
+    return JsonResponse({'documentos': data})
+
+
+@staff_member_required
+def sinistro_documentos_agregar(request, pk):
+    from datetime import datetime as dt
+    sinistro = get_object_or_404(Sinistro, pk=pk)
+    if request.method == 'POST':
+        data = request.POST
+        files = request.FILES
+        code_limpio = sinistro.code_sinistre.replace('/', '-') if sinistro.code_sinistre else f'SIN-{sinistro.id}'
+        upload_dir = 'uploads_sinistres/'
+        count = 0
+
+        tipos_doc = data.getlist('tipo_doc_siniestro[]')
+        for idx, id_tipo in enumerate(tipos_doc):
+            if not id_tipo:
+                continue
+            file_key = f'archivos_siniestro_{idx}'
+            archivos = files.getlist(file_key)
+            for i, f in enumerate(archivos):
+                ext = f.name.split('.')[-1].lower() if '.' in f.name else ''
+                nuevo_nombre = f'SIN_{code_limpio}_{dt.now().timestamp()}_{i}.{ext}'
+                DocumentoSinistro.objects.create(
+                    code_sinistre=sinistro.code_sinistre,
+                    nombre_archivo=nuevo_nombre,
+                    tipo_documento=int(id_tipo) if id_tipo.isdigit() else None,
+                    ruta_archivo=upload_dir + nuevo_nombre,
+                    archivo=f,
+                    sinistro=sinistro,
+                )
+                count += 1
+
+        for doc_id in data.getlist('docs_reutilizados'):
+            try:
+                orig = DocumentoUsuario.objects.get(pk=int(doc_id))
+            except (DocumentoUsuario.DoesNotExist, ValueError):
+                continue
+            DocumentoSinistro.objects.create(
+                code_sinistre=sinistro.code_sinistre,
+                nombre_archivo=orig.nombre_documento_usuario,
+                tipo_documento=orig.tipo_documento_id,
+                id_documento_usuario_origen=orig.id,
+                sinistro=sinistro,
+            )
+            count += 1
+
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if is_ajax:
+            return JsonResponse({'ok': True, 'count': count, 'id': sinistro.id})
+        messages.success(request, f'{count} documento(s) añadido(s) al siniestro {sinistro.code_sinistre}')
+        return redirect('sinistro_update', pk=sinistro.id)
+    return redirect('sinistro_list')
+
+
 class SinistroUpdateView(View):
     template_name = 'siniestros/form.html'
 
@@ -245,6 +314,40 @@ class SinistroUpdateView(View):
         sinistro.cod_sig_correcto = data.get('cod_sig_correcto') == '1'
         sinistro.poliza = poliza
         sinistro.save()
+
+        code_limpio = sinistro.code_sinistre.replace('/', '-') if sinistro.code_sinistre else f'SIN-{sinistro.id}'
+        upload_dir = 'uploads_sinistres/'
+
+        tipos_doc_up = data.getlist('tipo_doc_siniestro[]')
+        for idx, id_tipo in enumerate(tipos_doc_up):
+            if not id_tipo:
+                continue
+            file_key = f'archivos_siniestro_{idx}'
+            archivos = request.FILES.getlist(file_key)
+            for i, f in enumerate(archivos):
+                ext = f.name.split('.')[-1].lower() if '.' in f.name else ''
+                nuevo_nombre = f'SIN_{code_limpio}_{datetime.now().timestamp()}_{i}.{ext}'
+                DocumentoSinistro.objects.create(
+                    code_sinistre=sinistro.code_sinistre,
+                    nombre_archivo=nuevo_nombre,
+                    tipo_documento=int(id_tipo) if id_tipo.isdigit() else None,
+                    ruta_archivo=upload_dir + nuevo_nombre,
+                    archivo=f,
+                    sinistro=sinistro,
+                )
+
+        for doc_id in data.getlist('docs_reutilizados'):
+            try:
+                orig = DocumentoUsuario.objects.get(pk=int(doc_id))
+            except (DocumentoUsuario.DoesNotExist, ValueError):
+                continue
+            DocumentoSinistro.objects.create(
+                code_sinistre=sinistro.code_sinistre,
+                nombre_archivo=orig.nombre_documento_usuario,
+                tipo_documento=orig.tipo_documento_id,
+                id_documento_usuario_origen=orig.id,
+                sinistro=sinistro,
+            )
 
         messages.success(request, f'Siniestro {sinistro.code_sinistre} actualizado correctamente.')
         return redirect('sinistro_list')

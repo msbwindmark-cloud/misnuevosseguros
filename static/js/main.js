@@ -126,7 +126,7 @@ $(document).ready(function() {
 
     $('.datatable').DataTable({
         language: {
-            url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json'
+            url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json'
         },
         lengthMenu: [5, 10, 25, 50, 100],
         pageLength: 25,

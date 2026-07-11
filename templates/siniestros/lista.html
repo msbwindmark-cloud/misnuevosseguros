@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load poliza_extras %}
 {% block title %}Siniestros - Proyecto SIS{% endblock %}
 {% block content %}
 <div class="card">
@@ -42,9 +43,11 @@
                         <td><input type="checkbox" class="form-check-input check-item" value="{{ s.id }}"></td>
                         <td>
                             {{ s.id }}
-                            {% if s.id in siniestros_con_docs %}
-                            <span class="badge bg-info" title="Tiene documentos adjuntos"><i class="fas fa-paperclip"></i></span>
+                            {% with n=sinistro_docs_count|get_item:s.id %}
+                            {% if n > 0 %}
+                            <span class="badge bg-info" title="{{ n }} documento(s) adjunto(s)"><i class="fas fa-paperclip"></i> {{ n }}</span>
                             {% endif %}
+                            {% endwith %}
                         </td>
                         <td>{{ s.code_sinistre|default:'-' }}</td>
                         <td>{{ s.date_sinistre|date:"d/m/Y" }}</td>
@@ -57,6 +60,8 @@
                         <td>{{ s.date_payement|date:"d/m/Y"|default:'-' }}</td>
                         <td>
                             <a href="{% url 'sinistro_update' s.id %}" class="btn btn-warning btn-sm" title="Editar"><i class="fas fa-edit"></i></a>
+                            <button type="button" class="btn btn-info btn-sm btn-consultar-docs-sin" data-id="{{ s.id }}" title="Consulter les documents"><i class="fas fa-folder-open"></i></button>
+                            <button type="button" class="btn btn-primary btn-sm btn-ajouter-docs-sin" data-id="{{ s.id }}" title="Ajouter Document"><i class="fas fa-plus"></i></button>
                             <form method="post" action="{% url 'sinistro_delete' s.id %}" style="display:inline" class="delete-form">
                                 {% csrf_token %}
                                 <button type="button" class="btn btn-danger btn-sm btn-delete" title="Eliminar"><i class="fas fa-trash"></i></button>
@@ -72,12 +77,60 @@
         </div>
     </div>
 </div>
+
+<!-- MODAL CONSULTER DOCUMENTS SINISTRE -->
+<div class="modal fade" id="modalConsulterDocsSin" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-info text-white"><h5 class="modal-title"><i class="fas fa-folder-open"></i> Documents du sinistre <span id="docsSinTitle"></span></h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead><tr><th>Type</th><th>Nombre</th><th>Origen</th><th></th></tr></thead>
+                <tbody id="docsSinBody"></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button></div>
+</div></div></div>
+
+<!-- MODAL AJOUTER DOCUMENTS SINISTRE -->
+<div class="modal fade" id="modalAjouterDocsSin" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-primary text-white"><h5 class="modal-title"><i class="fas fa-plus"></i> Ajouter documents au sinistre <span id="docsAddSinTitle"></span></h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <h6 class="text-muted"><i class="fas fa-copy"></i> Documents existants (cocher pour associer)</h6>
+        <div id="lista-docs-poliza-sin" class="row mb-3"><p class="text-muted small">Chargement...</p></div>
+        <hr>
+        <h6 class="text-muted"><i class="fas fa-plus"></i> Nouveaux documents</h6>
+        <form id="formAjouterDocsSin" enctype="multipart/form-data">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input type="hidden" name="recu" id="ajouterDocsSinRecu" value="">
+            <div id="contenedor-filas-docs-sin">
+                <div class="row mb-3 fila-doc-sin">
+                    <div class="col-md-4">
+                        <select name="tipo_doc_siniestro[]" class="form-select">
+                            <option value="">Seleccioner un type...</option>
+                            {% for t in tipos_doc %}<option value="{{ t.id }}">{{ t.tipo_documento }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="file" name="archivos_siniestro_0" class="form-control" multiple>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="eliminarFilaDocSin(this)"><i class="fa fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="nuevaFilaDocSin()">+ Añadir otra categoría</button>
+            <div class="text-end"><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Enregistrer</button></div>
+        </form>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button></div>
+</div></div></div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 var tablaSiniestros = $('#tablaSiniestros').DataTable({
-    language: { url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
+    language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
     lengthMenu: [5, 10, 25, 50, 100],
     pageLength: 5,
     responsive: true,
@@ -157,5 +210,105 @@ document.querySelectorAll('.btn-delete').forEach(btn => {
         });
     });
 });
+
+// === CONSULTER DOCUMENTS SINISTRE ===
+document.querySelectorAll('.btn-consultar-docs-sin').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var sinId = this.getAttribute('data-id');
+        document.getElementById('docsSinTitle').textContent = 'nº ' + sinId;
+        document.getElementById('docsSinBody').innerHTML = '<tr><td colspan="4" class="text-center"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+        new bootstrap.Modal(document.getElementById('modalConsulterDocsSin')).show();
+        fetch('{% url "sinistro_documentos_data" 0 %}'.replace('/0/', '/' + sinId + '/'))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var tbody = document.getElementById('docsSinBody');
+                if (!data.documentos.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Aucun document</td></tr>';
+                    return;
+                }
+                var html = '';
+                data.documentos.forEach(function(d) {
+                    var origen = d.heredado ? '<span class="badge bg-warning text-dark">Heredado</span>' : '<span class="badge bg-success">Nuevo</span>';
+                    var enlace = d.archivo ? '<a href="' + d.archivo + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></a>' : '';
+                    html += '<tr><td>' + d.tipo + '</td><td>' + d.nombre + '</td><td>' + origen + '</td><td>' + enlace + '</td></tr>';
+                });
+                tbody.innerHTML = html;
+            })
+            .catch(function() {
+                document.getElementById('docsSinBody').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erreur</td></tr>';
+            });
+    });
+});
+
+// === AJOUTER DOCUMENTS SINISTRE ===
+var filaDocSinIdx = 1;
+document.querySelectorAll('.btn-ajouter-docs-sin').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var sinId = this.getAttribute('data-id');
+        document.getElementById('docsAddSinTitle').textContent = 'nº ' + sinId;
+        document.getElementById('ajouterDocsSinRecu').value = sinId;
+        document.getElementById('formAjouterDocsSin').action = '{% url "sinistro_documentos_agregar" 0 %}'.replace('/0/', '/' + sinId + '/');
+        var cont = document.getElementById('lista-docs-poliza-sin');
+        cont.innerHTML = '<p class="text-muted small"><i class="fas fa-spinner fa-spin"></i> Chargement...</p>';
+        new bootstrap.Modal(document.getElementById('modalAjouterDocsSin')).show();
+        fetch('{% url "sinistro_documentos_data" 0 %}'.replace('/0/', '/' + sinId + '/'))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.documentos.length) {
+                    cont.innerHTML = '<p class="text-muted small">Aucun document existant.</p>';
+                    return;
+                }
+                var html = '';
+                data.documentos.forEach(function(d) {
+                    var tipo = (d.tipo || '').replace(/</g, '&lt;');
+                    var nombre = (d.nombre || '').replace(/</g, '&lt;');
+                    var link = d.archivo ? '<a href="' + d.archivo + '" target="_blank" class="ms-1"><i class="fas fa-external-link-alt"></i></a>' : '';
+                    html += '<div class="col-md-6 mb-2"><div class="card card-body p-2 shadow-sm"><div class="form-check">' +
+                        '<input class="form-check-input" type="checkbox" name="docs_reutilizados" value="' + d.id + '" id="docsin_' + d.id + '">' +
+                        '<label class="form-check-label text-truncate" for="docsin_' + d.id + '" style="max-width:90%">' +
+                        '<strong>' + tipo + '</strong><br><small class="text-muted">' + nombre + '</small>' +
+                        '</label>' + link + '</div></div></div>';
+                });
+                cont.innerHTML = html;
+            })
+            .catch(function() { cont.innerHTML = '<p class="text-danger small">Erreur de chargement.</p>'; });
+    });
+});
+
+document.getElementById('formAjouterDocsSin').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var sinId = document.getElementById('ajouterDocsSinRecu').value;
+    if (!sinId) return;
+    var btnSubmit = this.querySelector('button[type="submit"]');
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    var formData = new FormData(this);
+    fetch(this.action, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+            if (data.ok) {
+                Swal.fire({ icon: 'success', title: data.count + ' documento(s) añadido(s)', timer: 1500, showConfirmButton: false });
+                setTimeout(function() { location.reload(); }, 1500);
+            }
+        })
+        .catch(function() { btnSubmit.disabled = false; btnSubmit.innerHTML = '<i class="fas fa-save"></i> Enregistrer'; });
+});
+
+function nuevaFilaDocSin() {
+    var c = document.getElementById('contenedor-filas-docs-sin');
+    var f = c.querySelector('.fila-doc-sin').cloneNode(true);
+    f.querySelector('select').value = '';
+    f.querySelector('input[type="file"]').value = '';
+    f.querySelector('input[type="file"]').name = 'archivos_siniestro_' + filaDocSinIdx;
+    c.appendChild(f);
+    filaDocSinIdx++;
+}
+
+function eliminarFilaDocSin(btn) {
+    var c = document.getElementById('contenedor-filas-docs-sin');
+    if (c.querySelectorAll('.fila-doc-sin').length > 1) btn.closest('.fila-doc-sin').remove();
+}
 </script>
 {% endblock %}

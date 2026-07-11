@@ -1,6 +1,7 @@
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView
 from django.contrib import messages
+from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import TipoDocumento, DocumentoUsuario
@@ -33,19 +34,29 @@ def add_document_to_poliza(request, recu=None):
     if request.method == 'POST':
         recu_post = request.POST.get('recu')
         poliza = get_object_or_404(Poliza, pk=recu_post)
-        id_tipo = request.POST.get('tipo_documento')
-        archivos = request.FILES.getlist('archivos')
+        tipos_doc = request.POST.getlist('tipo_doc_modal[]')
+        count = 0
+        for idx, id_tipo in enumerate(tipos_doc):
+            if not id_tipo:
+                continue
+            file_key = f'archivos_modal_{idx}'
+            archivos = request.FILES.getlist(file_key)
+            for f in archivos:
+                DocumentoUsuario.objects.create(
+                    id_usuario=poliza.recu,
+                    nombre_documento_usuario=f.name,
+                    tipo_documento_usuario=f.name.split('.')[-1].lower() if '.' in f.name else '',
+                    tamanio_documento_usuario=f.size,
+                    tipo_documento_id=int(id_tipo) if id_tipo and id_tipo.isdigit() else None,
+                    archivo=f,
+                )
+                count += 1
 
-        for f in archivos:
-            DocumentoUsuario.objects.create(
-                id_usuario=poliza.recu,
-                nombre_documento_usuario=f.name,
-                tipo_documento_usuario=f.name.split('.')[-1].lower() if '.' in f.name else '',
-                tamanio_documento_usuario=f.size,
-                tipo_documento_id=int(id_tipo) if id_tipo and id_tipo.isdigit() else None,
-                archivo=f,
-            )
-        messages.success(request, f'{len(archivos)} documento(s) añadido(s) a la póliza nº {poliza.recu}')
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if is_ajax:
+            return JsonResponse({'ok': True, 'count': count, 'recu': poliza.recu})
+
+        messages.success(request, f'{count} documento(s) añadido(s) a la póliza nº {poliza.recu}')
         return redirect('add_document_to_poliza', recu=poliza.recu)
 
     tipos = TipoDocumento.objects.all()

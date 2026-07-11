@@ -25,7 +25,7 @@
                 <div class="input-group">
                     <input type="text" class="form-control" name="police" id="id_police" value="{{ val.police }}" readonly>
                     <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalPolizas"><i class="fas fa-search"></i></button>
-                    <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalDocsPoliza"><i class="fas fa-file"></i> Docs</button>
+                    <button type="button" class="btn btn-outline-info" onclick="abrirModalDocumentos()"><i class="fas fa-file"></i> Gestionar Documentos</button>
                 </div>
             </div>
             <div class="col-md-3"><label>Assuré:</label><input type="text" class="form-control" name="assure" id="id_assure" value="{{ val.assure }}" readonly></div>
@@ -98,23 +98,20 @@
     <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button></div>
 </div></div></div>
 
-<!-- MODAL DOCUMENTOS PÓLIZA (reutilizar) -->
-<div class="modal fade" id="modalDocsPoliza" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
-    <div class="modal-header bg-dark text-white"><h5 class="modal-title">Documentos de la póliza (reutilizar)</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+<!-- MODAL GESTIÓN DOCUMENTOS SINIESTRO -->
+<div class="modal fade" id="modalDocumentosSiniestro" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-dark text-white"><h5 class="modal-title"><i class="fas fa-file"></i> Documentos del Siniestro</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
-        <div id="docsPolizaContainer"><p class="text-muted">Selecciona primero una póliza.</p></div>
-    </div>
-    <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="confirmarDocsReutilizados()" data-bs-dismiss="modal"><i class="fas fa-check"></i> Listo</button></div>
-</div></div></div>
-
-<!-- MODAL NUEVOS DOCUMENTOS -->
-<div class="modal fade" id="modalNuevosDocs" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
-    <div class="modal-header bg-dark text-white"><h5 class="modal-title">Adjuntar nuevos documentos</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
+        <h6 class="text-muted"><i class="fas fa-copy"></i> Documentos de la póliza (cocher para asociar)</h6>
+        <div id="docsPolizaContainer" class="row mb-3">
+            <p class="text-muted">Selecciona primero una póliza.</p>
+        </div>
+        <hr>
+        <h6 class="text-muted"><i class="fas fa-plus"></i> Subir nuevos documentos</h6>
         <div id="contenedor-filas-docs-siniestro">
             <div class="row mb-3 fila-doc-siniestro">
                 <div class="col-md-5">
-                    <select name="tipo_doc_siniestro[]" class="form-control">
+                    <select name="tipo_doc_siniestro[]" class="form-select">
                         <option value="">Seleccioner un type...</option>
                         {% for t in tipos_doc %}<option value="{{ t.id }}">{{ t.tipo_documento }}</option>{% endfor %}
                     </select>
@@ -127,9 +124,11 @@
                 </div>
             </div>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-primary" onclick="nuevaFilaDocSiniestro()">+ Añadir otra categoría</button>
+        <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="nuevaFilaDocSiniestro()">+ Añadir otra categoría</button>
     </div>
-    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Listo</button></div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="confirmarDocsReutilizados()" data-bs-dismiss="modal"><i class="fas fa-check"></i> Aceptar Selección</button>
+    </div>
 </div></div></div>
 {% endblock %}
 
@@ -144,7 +143,7 @@ function cargarPolizas(q) {
             let html = '';
             data.forEach(p => {
                 html += '<tr><td>' + p.recu + '</td><td>' + p.police + '</td><td>' + p.assure + '</td><td>' + p.marque + '</td><td>' + p.matricule +
-                    '</td><td><button class="btn btn-sm btn-success" onclick="seleccionarPoliza(' + p.recu + ',\'' + p.police.replace(/'/g,"\\'") + '\',\'' + p.assure.replace(/'/g,"\\'") + '\')">Sel.</button></td></tr>';
+                    '</td><td><button type="button" class="btn btn-sm btn-success" onclick="seleccionarPoliza(' + p.recu + ',\'' + p.police.replace(/'/g,"\\'") + '\',\'' + p.assure.replace(/'/g,"\\'") + '\')">Sel.</button></td></tr>';
             });
             document.getElementById('tablaPolizasBody').innerHTML = html || '<tr><td colspan="6" class="text-center">Sin resultados</td></tr>';
         });
@@ -155,16 +154,37 @@ function seleccionarPoliza(recu, police, assure) {
     document.getElementById('id_police').value = police;
     document.getElementById('id_assure').value = assure;
     bootstrap.Modal.getInstance(document.getElementById('modalPolizas')).hide();
-    // Cargar documentos de esta póliza para posible reutilización
+}
+
+function abrirModalDocumentos() {
+    var police = document.getElementById('id_police').value;
+    if (!police || police.trim() === '') {
+        Swal.fire({ icon: 'warning', title: '¡Espera!', text: 'Debes seleccionar una póliza primero para ver sus documentos.', confirmButtonColor: '#3085d6' });
+        return;
+    }
+    var contenedor = document.getElementById('docsPolizaContainer');
+    contenedor.innerHTML = '<div class="text-center w-100"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
+    new bootstrap.Modal(document.getElementById('modalDocumentosSiniestro')).show();
+    var recu = document.getElementById('id_recu').value;
     fetch('{% url "get_poliza_documentos" 0 %}'.replace('/0/', '/' + recu + '/'))
         .then(r => r.json()).then(docs => {
-            let html = '';
-            if (docs.length === 0) html = '<p class="text-muted">Esta póliza no tiene documentos.</p>';
+            if (docs.length === 0) {
+                contenedor.innerHTML = '<p class="text-muted">Cette police n\'a pas de documents existants.</p>';
+                return;
+            }
+            var html = '';
             docs.forEach(d => {
-                html += '<div class="form-check"><input class="form-check-input doc-reutilizar" type="checkbox" value="' + d.id + '" id="doc_reu_' + d.id + '"><label class="form-check-label" for="doc_reu_' + d.id + '">' + d.tipo + ' - ' + d.nombre + '</label></div>';
+                var tipo = (d.tipo || '').replace(/</g, '&lt;');
+                var nombre = (d.nombre || '').replace(/</g, '&lt;');
+                html += '<div class="col-md-6 mb-2"><div class="card card-body p-2 shadow-sm"><div class="form-check">' +
+                    '<input class="form-check-input doc-reutilizar" type="checkbox" value="' + d.id + '" id="doc_reu_' + d.id + '">' +
+                    '<label class="form-check-label text-truncate" for="doc_reu_' + d.id + '" style="max-width:90%">' +
+                    '<strong>' + tipo + '</strong><br><small class="text-muted">' + nombre + '</small>' +
+                    '</label></div></div></div>';
             });
-            document.getElementById('docsPolizaContainer').innerHTML = html;
-        });
+            contenedor.innerHTML = html;
+        })
+        .catch(() => { contenedor.innerHTML = '<p class="text-danger small">Erreur lors du chargement.</p>'; });
 }
 
 function confirmarDocsReutilizados() {

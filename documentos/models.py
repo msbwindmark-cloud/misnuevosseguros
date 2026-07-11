@@ -21,6 +21,7 @@ class DocumentoUsuario(models.Model):
     tamanio_documento_usuario = models.BigIntegerField(blank=True, null=True)
     tipo_documento = models.ForeignKey(TipoDocumento, on_delete=models.SET_NULL, null=True, blank=True)
     archivo = models.FileField(upload_to='documentos_usuarios/', blank=True)
+    id_documento_usuario_origen = models.IntegerField(null=True, blank=True, verbose_name='Documento de origen')
     creado_el = models.DateTimeField(auto_now_add=True)
 
     class Meta:

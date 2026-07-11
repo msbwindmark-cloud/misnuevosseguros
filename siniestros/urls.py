@@ -12,4 +12,6 @@ urlpatterns = [
     path('excel/', views.sinistro_list_excel, name='sinistro_list_excel'),
     path('api/polizas/', views.get_polizas_json, name='get_polizas_siniestro'),
     path('api/poliza/<int:pk>/documentos/', views.get_poliza_documentos, name='get_poliza_documentos'),
+    path('api/<int:pk>/documentos/', views.sinistro_documentos_data, name='sinistro_documentos_data'),
+    path('<int:pk>/docs/agregar/', views.sinistro_documentos_agregar, name='sinistro_documentos_agregar'),
 ]

@@ -12,7 +12,9 @@ urlpatterns = [
     path('api/cliente/crear/', views.crear_cliente_ajax, name='crear_cliente_ajax'),
     path('api/<int:pk>/garantias/', views.poliza_garantias_data, name='poliza_garantias_data'),
     path('api/<int:pk>/documentos/', views.poliza_documents_data, name='poliza_documents_data'),
+    path('<int:pk>/docs/agregar/', views.poliza_documentos_agregar, name='poliza_documentos_agregar'),
     path('api/attestations/', views.get_attestations_json, name='get_attestations_json'),
     path('api/attestation/creer/', views.crear_attestation_ajax, name='crear_attestation_ajax'),
     path('api/polizas/', views.get_polizas_json, name='get_polizas_json'),
+    path('api/docs-by-police/', views.poliza_docs_by_police, name='poliza_docs_by_police'),
 ]
