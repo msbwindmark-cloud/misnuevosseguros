@@ -259,6 +259,21 @@ def sinistro_delete(request, pk):
     return redirect('sinistro_list')
 
 
+def sinistro_bulk_delete(request):
+    if request.method == 'POST':
+        pks = request.POST.getlist('pk')
+        qs = Sinistro.objects.filter(pk__in=pks)
+        count = qs.count()
+        qs.delete()
+        if count == 1:
+            messages.success(request, 'Siniestro eliminado correctamente.')
+        elif count > 1:
+            messages.success(request, f'{count} siniestros eliminados correctamente.')
+        else:
+            messages.error(request, 'No se eliminó ningún siniestro.')
+    return redirect('sinistro_list')
+
+
 def sinistro_pdf(request, pk):
     from reportlab.lib.pagesizes import A4
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer

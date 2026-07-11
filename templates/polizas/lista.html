@@ -5,6 +5,7 @@
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h4 class="mb-0"><i class="fas fa-file-invoice"></i> Lista de Pólizas</h4>
         <div>
+            <button type="button" id="btnEliminarSeleccion" class="btn btn-danger btn-sm" disabled><i class="fas fa-trash"></i> Eliminar sélection (<span id="contadorSel">0</span>)</button>
             <a href="{% url 'poliza_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nueva</a>
             <a href="{% url 'export_polizas_pdf' %}" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a>
             <a href="{% url 'export_polizas_excel' %}" class="btn btn-info btn-sm"><i class="fas fa-file-excel"></i> Excel</a>
@@ -54,9 +55,10 @@
             </div>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover datatable">
+            <table class="table table-hover" id="tablaPolizas">
                 <thead>
                     <tr>
+                        <th class="no-sort" style="width:1%"><input type="checkbox" id="checkTodos" class="form-check-input" title="Seleccionar todo"></th>
                         <th>Recibo</th>
                         <th>Fecha</th>
                         <th>Tipo</th>
@@ -71,6 +73,7 @@
                 <tbody>
                     {% for p in polizas %}
                     <tr>
+                        <td><input type="checkbox" class="form-check-input check-poliza" value="{{ p.recu }}"></td>
                         <td>
                             <a href="{% url 'poliza_detail' p.recu %}">{{ p.recu }}</a>
                             {% if p.recu in polizas_con_docs %}
@@ -96,7 +99,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="9" class="text-center">No hay pólizas</td></tr>
+                    <tr><td colspan="10" class="text-center">No hay pólizas</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -228,6 +231,73 @@
 {% endblock %}
 {% block extra_js %}
 <script>
+    var tablaPolizas = $('#tablaPolizas').DataTable({
+        language: { url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
+        lengthMenu: [5, 10, 25, 50, 100],
+        pageLength: 5,
+        responsive: true,
+        order: [[1, 'desc']],
+        columnDefs: [{ orderable: false, targets: 0 }]
+    });
+
+    function actualizarSeleccion() {
+        var total = tablaPolizas.$('input.check-poliza').length;
+        var marcados = tablaPolizas.$('input.check-poliza:checked').length;
+        document.getElementById('contadorSel').textContent = marcados;
+        document.getElementById('btnEliminarSeleccion').disabled = (marcados === 0);
+        var checkTodos = document.getElementById('checkTodos');
+        checkTodos.checked = (marcados > 0 && marcados === total);
+        checkTodos.indeterminate = (marcados > 0 && marcados < total);
+    }
+
+    document.getElementById('checkTodos').addEventListener('change', function () {
+        var marcar = this.checked;
+        tablaPolizas.$('input.check-poliza').prop('checked', marcar);
+        actualizarSeleccion();
+    });
+
+    $('#tablaPolizas').on('change', 'input.check-poliza', function () {
+        actualizarSeleccion();
+    });
+
+    document.getElementById('btnEliminarSeleccion').addEventListener('click', function () {
+        var seleccionados = [];
+        tablaPolizas.$('input.check-poliza:checked').each(function () {
+            seleccionados.push(this.value);
+        });
+        if (seleccionados.length === 0) return;
+        Swal.fire({
+            title: '¿Eliminar ' + seleccionados.length + ' póliza(s)?',
+            text: 'Esta acción las moverá a la lista de eliminadas',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{% url "poliza_list_delete" %}';
+                var csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = 'csrfmiddlewaretoken';
+                csrf.value = '{{ csrf_token }}';
+                form.appendChild(csrf);
+                seleccionados.forEach(function (recu) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'pk';
+                    input.value = recu;
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    });
+
     function filtrarTablaModal(inputId, tablaId) {
         var filtro = document.getElementById(inputId).value.toLowerCase();
         var filas = document.querySelectorAll('#' + tablaId + ' tbody tr');

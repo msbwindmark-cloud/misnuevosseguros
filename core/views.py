@@ -271,11 +271,13 @@ def poliza_list_delete(request):
     from django.shortcuts import redirect
     from django.contrib import messages
     if request.method == 'POST':
-        pk = request.POST.get('pk')
-        if pk:
+        pks = request.POST.getlist('pk')
+        count = 0
+        for pk in pks:
+            if not pk:
+                continue
             try:
                 p = Poliza.objects.get(pk=pk)
-                import datetime
                 PolizaEliminada.objects.create(
                     recu=p.recu, fecha_hoy=p.fecha_hoy, letype=p.letype,
                     attestation=p.attestation, police=p.police, matricule=p.matricule,
@@ -285,9 +287,15 @@ def poliza_list_delete(request):
                     cree_le=p.cree_le,
                 )
                 p.delete()
-                messages.success(request, 'Póliza eliminada correctamente')
+                count += 1
             except Poliza.DoesNotExist:
-                messages.error(request, 'Póliza no encontrada')
+                continue
+        if count == 1:
+            messages.success(request, 'Póliza eliminada correctamente')
+        elif count > 1:
+            messages.success(request, f'{count} pólizas eliminadas correctamente')
+        else:
+            messages.error(request, 'No se eliminó ninguna póliza')
         return redirect('poliza_list')
     return redirect('poliza_list')
 

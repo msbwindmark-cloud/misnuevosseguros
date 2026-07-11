@@ -6,6 +6,7 @@ urlpatterns = [
     path('nuevo/', views.SinistroCreateView.as_view(), name='sinistro_create'),
     path('<int:pk>/editar/', views.SinistroUpdateView.as_view(), name='sinistro_update'),
     path('<int:pk>/eliminar/', views.sinistro_delete, name='sinistro_delete'),
+    path('eliminar-multiple/', views.sinistro_bulk_delete, name='sinistro_bulk_delete'),
     path('<int:pk>/pdf/', views.sinistro_pdf, name='sinistro_pdf'),
     path('pdf/', views.sinistro_list_pdf, name='sinistro_list_pdf'),
     path('excel/', views.sinistro_list_excel, name='sinistro_list_excel'),

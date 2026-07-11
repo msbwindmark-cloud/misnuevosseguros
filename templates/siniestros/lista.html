@@ -5,6 +5,7 @@
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Lista de Siniestros</h4>
         <div>
+            <button type="button" id="btnEliminarSeleccion" class="btn btn-danger btn-sm" disabled><i class="fas fa-trash"></i> Eliminar sélection (<span id="contadorSel">0</span>)</button>
             <a href="{% url 'sinistro_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nuevo Siniestro</a>
             <a href="{% url 'sinistro_list_pdf' %}" class="btn btn-info btn-sm"><i class="fas fa-file-pdf"></i> PDF Lista</a>
             <a href="{% url 'sinistro_list_excel' %}" class="btn btn-secondary btn-sm"><i class="fas fa-file-excel"></i> Excel</a>
@@ -18,9 +19,10 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover datatable">
+            <table class="table table-hover" id="tablaSiniestros">
                 <thead>
                     <tr>
+                        <th class="no-sort" style="width:1%"><input type="checkbox" id="checkTodos" class="form-check-input" title="Seleccionar todo"></th>
                         <th>ID</th>
                         <th>Code Sin.</th>
                         <th>Fecha</th>
@@ -37,6 +39,7 @@
                 <tbody>
                     {% for s in siniestros %}
                     <tr>
+                        <td><input type="checkbox" class="form-check-input check-item" value="{{ s.id }}"></td>
                         <td>
                             {{ s.id }}
                             {% if s.id in siniestros_con_docs %}
@@ -62,7 +65,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="11" class="text-center">No hay siniestros</td></tr>
+                    <tr><td colspan="12" class="text-center">No hay siniestros</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -73,6 +76,70 @@
 
 {% block extra_js %}
 <script>
+var tablaSiniestros = $('#tablaSiniestros').DataTable({
+    language: { url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
+    lengthMenu: [5, 10, 25, 50, 100],
+    pageLength: 5,
+    responsive: true,
+    order: [[1, 'desc']],
+    columnDefs: [{ orderable: false, targets: 0 }]
+});
+
+function actualizarSeleccion() {
+    var total = tablaSiniestros.$('input.check-item').length;
+    var marcados = tablaSiniestros.$('input.check-item:checked').length;
+    document.getElementById('contadorSel').textContent = marcados;
+    document.getElementById('btnEliminarSeleccion').disabled = (marcados === 0);
+    var checkTodos = document.getElementById('checkTodos');
+    checkTodos.checked = (marcados > 0 && marcados === total);
+    checkTodos.indeterminate = (marcados > 0 && marcados < total);
+}
+
+document.getElementById('checkTodos').addEventListener('change', function () {
+    tablaSiniestros.$('input.check-item').prop('checked', this.checked);
+    actualizarSeleccion();
+});
+
+$('#tablaSiniestros').on('change', 'input.check-item', actualizarSeleccion);
+
+document.getElementById('btnEliminarSeleccion').addEventListener('click', function () {
+    var seleccionados = [];
+    tablaSiniestros.$('input.check-item:checked').each(function () {
+        seleccionados.push(this.value);
+    });
+    if (seleccionados.length === 0) return;
+    Swal.fire({
+        title: '¿Eliminar ' + seleccionados.length + ' siniestro(s)?',
+        text: 'Esta acción no se puede deshacer.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then(result => {
+        if (result.isConfirmed) {
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{% url "sinistro_bulk_delete" %}';
+            var csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = 'csrfmiddlewaretoken';
+            csrf.value = '{{ csrf_token }}';
+            form.appendChild(csrf);
+            seleccionados.forEach(function (id) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'pk';
+                input.value = id;
+                form.appendChild(input);
+            });
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+});
+
 document.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', function(e) {
         const form = this.closest('.delete-form');

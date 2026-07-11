@@ -92,3 +92,26 @@ class ClienteDeleteView(DeleteView):
         )
         messages.success(self.request, self.success_message)
         return super().delete(request, *args, **kwargs)
+
+
+@staff_member_required
+def cliente_bulk_delete(request):
+    if request.method == 'POST':
+        pks = request.POST.getlist('pk')
+        count = 0
+        for cliente in Cliente.objects.filter(pk__in=pks):
+            ClienteEliminado.objects.create(
+                code_client=cliente.code_client,
+                nom_client=cliente.nom_client,
+                telephone_client=cliente.telephone_client,
+                email_client=cliente.email_client,
+            )
+            cliente.delete()
+            count += 1
+        if count == 1:
+            messages.success(request, 'Cliente eliminado correctamente')
+        elif count > 1:
+            messages.success(request, f'{count} clientes eliminados correctamente')
+        else:
+            messages.error(request, 'No se eliminó ningún cliente')
+    return redirect('cliente_list')

@@ -5,6 +5,7 @@
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h4 class="mb-0"><i class="fas fa-users"></i> Lista de Clientes</h4>
         <div>
+            <button type="button" id="btnEliminarSeleccion" class="btn btn-danger btn-sm" disabled><i class="fas fa-trash"></i> Eliminar sélection (<span id="contadorSel">0</span>)</button>
             <a href="{% url 'cliente_create' %}" class="btn btn-success btn-sm">
                 <i class="fas fa-plus"></i> Nuevo
             </a>
@@ -22,9 +23,10 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover datatable">
+            <table class="table table-hover" id="tablaClientes">
                 <thead>
                     <tr>
+                        <th class="no-sort" style="width:1%"><input type="checkbox" id="checkTodos" class="form-check-input" title="Seleccionar todo"></th>
                         <th>Código</th>
                         <th>Nombre</th>
                         <th>Teléfono</th>
@@ -36,6 +38,7 @@
                 <tbody>
                     {% for c in clientes %}
                     <tr>
+                        <td><input type="checkbox" class="form-check-input check-item" value="{{ c.pk }}"></td>
                         <td>{{ c.code_client }}</td>
                         <td>{{ c.nom_client }}</td>
                         <td>{{ c.telephone_client }}</td>
@@ -50,11 +53,78 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center">No hay clientes</td></tr>
+                    <tr><td colspan="7" class="text-center">No hay clientes</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+var tablaClientes = $('#tablaClientes').DataTable({
+    language: { url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
+    lengthMenu: [5, 10, 25, 50, 100],
+    pageLength: 5,
+    responsive: true,
+    order: [[1, 'desc']],
+    columnDefs: [{ orderable: false, targets: 0 }]
+});
+
+function actualizarSeleccion() {
+    var total = tablaClientes.$('input.check-item').length;
+    var marcados = tablaClientes.$('input.check-item:checked').length;
+    document.getElementById('contadorSel').textContent = marcados;
+    document.getElementById('btnEliminarSeleccion').disabled = (marcados === 0);
+    var checkTodos = document.getElementById('checkTodos');
+    checkTodos.checked = (marcados > 0 && marcados === total);
+    checkTodos.indeterminate = (marcados > 0 && marcados < total);
+}
+
+document.getElementById('checkTodos').addEventListener('change', function () {
+    tablaClientes.$('input.check-item').prop('checked', this.checked);
+    actualizarSeleccion();
+});
+
+$('#tablaClientes').on('change', 'input.check-item', actualizarSeleccion);
+
+document.getElementById('btnEliminarSeleccion').addEventListener('click', function () {
+    var seleccionados = [];
+    tablaClientes.$('input.check-item:checked').each(function () {
+        seleccionados.push(this.value);
+    });
+    if (seleccionados.length === 0) return;
+    Swal.fire({
+        title: '¿Eliminar ' + seleccionados.length + ' cliente(s)?',
+        text: 'Esta acción los moverá a la lista de eliminados',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then(result => {
+        if (result.isConfirmed) {
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{% url "cliente_bulk_delete" %}';
+            var csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = 'csrfmiddlewaretoken';
+            csrf.value = '{{ csrf_token }}';
+            form.appendChild(csrf);
+            seleccionados.forEach(function (id) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'pk';
+                input.value = id;
+                form.appendChild(input);
+            });
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+});
+</script>
 {% endblock %}
