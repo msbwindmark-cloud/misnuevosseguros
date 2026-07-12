@@ -152,30 +152,217 @@ def _footer_section():
                      ParagraphStyle('foot', fontSize=7, alignment=TA_CENTER, textColor=HexColor('#999999')))
 
 
+def _quittance_pdf(poliza, doc_type="FACTURE"):
+    from reportlab.pdfgen import canvas as canvasmod
+    fecha_str = datetime.now().strftime('%d/%m/%Y')
+    prefix = "F" if doc_type == "FACTURE" else "R"
+
+    buf = io.BytesIO()
+    c = canvasmod.Canvas(buf, pagesize=A4)
+    c.setTitle(doc_type)
+
+    y = A4[1] - 35*mm
+
+    c.setFont('Helvetica', 12)
+    c.drawString(60, y, f'Rabat, le :  {fecha_str}')
+    y -= 12*mm
+    c.setFont('Helvetica-Bold', 12)
+    c.drawString(60, y, f'{poliza.assure} {poliza.prenom}')
+    y -= 10*mm
+
+    if poliza.address_client:
+        c.setFillColor(HexColor('#e6e6e6'))
+        addr_lines = [poliza.address_client[i:i+60] for i in range(0, len(poliza.address_client), 60)]
+        addr_h = len(addr_lines) * 5*mm
+        c.rect(60, y - addr_h + 3*mm, 120*mm, addr_h + 2*mm, fill=True, stroke=False)
+        c.setFillColor(black)
+        c.setFont('Helvetica', 9)
+        for line in addr_lines:
+            c.drawString(62, y, line)
+            y -= 5*mm
+        y -= 4*mm
+
+    y -= 8*mm
+    c.setFont('Helvetica-Bold', 14)
+    c.drawCentredString(A4[0]/2, y, doc_type)
+    tw = c.stringWidth(doc_type, 'Helvetica-Bold', 14)
+    c.line(A4[0]/2 - tw/2, y - 2, A4[0]/2 + tw/2, y - 2)
+    y -= 18*mm
+
+    col_widths = [28*mm, 32*mm, 35*mm, 22*mm, 18*mm, 14*mm, 22*mm, 22*mm]
+    headers = ['N\u00b0 Police', 'P\u00e9riode', 'D\u00e9signation', 'Prime Nette', 'Taxes', 'T.P', 'ACCESOIRES', 'Total TTC']
+    total_w = sum(col_widths)
+    x_start = (A4[0] - total_w) / 2
+
+    c.setFont('Helvetica-Bold', 8)
+    c.setFillColor(HexColor('#0D6EFD'))
+    c.rect(x_start, y, total_w, 8*mm, fill=True, stroke=False)
+    c.setFillColor(white)
+    x = x_start
+    for i, h in enumerate(headers):
+        c.drawCentredString(x + col_widths[i]/2, y + 2.5*mm, h)
+        x += col_widths[i]
+    c.setFillColor(black)
+    y -= 1*mm
+
+    row_strs = [
+        poliza.police or '',
+        f"{poliza.du.strftime('%d/%m/%Y') if poliza.du else ''} AU {poliza.au.strftime('%d/%m/%Y') if poliza.au else ''}",
+        poliza.designation or '',
+        str(poliza.prime_net or 0),
+        str(poliza.taxes or 0),
+        str(poliza.tp or 0),
+        str(poliza.accesoires or 0),
+        str(poliza.totale or 0),
+    ]
+    max_lines = 1
+    for val in row_strs:
+        n = max(1, -(-len(val) // 20))
+        max_lines = max(max_lines, n)
+    row_h = max(12*mm, max_lines * 5*mm + 6*mm)
+
+    c.setFont('Helvetica', 8)
+    c.setStrokeColor(HexColor('#cccccc'))
+    x = x_start
+    for i, val in enumerate(row_strs):
+        c.rect(x, y - row_h, col_widths[i], row_h, fill=False, stroke=True)
+        wrapped = [val[j:j+20] for j in range(0, len(val), 20)]
+        ty = y - 4*mm
+        for wl in wrapped:
+            c.drawCentredString(x + col_widths[i]/2, ty, wl)
+            ty -= 4.5*mm
+        x += col_widths[i]
+    y -= row_h
+
+    y -= 10*mm
+    totals = [
+        ("Total Primes Nettes:", str(poliza.prime_net or 0)),
+        ("Total Taxes & T.P.:", f"{float(poliza.taxes or 0) + float(poliza.tp or 0)}"),
+        ("Total Accessoires:", str(poliza.accesoires or 0)),
+        ("Total TTC:", str(poliza.totale or 0)),
+    ]
+    c.setFont('Helvetica-Bold', 10)
+    for label, val in totals:
+        c.setStrokeColor(HexColor('#cccccc'))
+        c.rect(x_start + total_w - 130*mm, y, 90*mm, 7*mm, fill=False, stroke=True)
+        c.drawString(x_start + total_w - 128*mm, y + 2*mm, label)
+        c.rect(x_start + total_w - 40*mm, y, 40*mm, 7*mm, fill=False, stroke=True)
+        c.drawRightString(x_start + total_w - 3*mm, y + 2*mm, val)
+        y -= 7*mm
+
+    c.save()
+    buf.seek(0)
+    return buf
+
+
 # ---------- INVOICE VIEWS ----------
 
 def invoice_by_receipt(request, pk):
     poliza = get_object_or_404(Poliza, recu=pk)
-    if not REPORTLAB_AVAILABLE:
-        return HttpResponse("Reportlab no está instalado.", status=500)
+    buf = _quittance_pdf(poliza, "FACTURE")
+    now = datetime.now()
+    ts = f"{now.day:02d}-{now.month:02d}-{now.year}-{now.hour}-{now.minute:02d}-{now.second:02d}"
+    return _build_pdf_response(buf, f'{poliza.assure}-F-{str(poliza.recu).zfill(5)}-{ts}.pdf')
 
+
+def _client_pdf(cliente, polizas, prefix, title):
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-                            topMargin=2*cm, bottomMargin=2*cm,
-                            leftMargin=2*cm, rightMargin=2*cm)
+    doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm, leftMargin=2*cm, rightMargin=2*cm)
     elements = []
-    elements.append(_header_table("FACTURE", f"N° {poliza.recu}"))
+    fecha_hoy = datetime.now().strftime('%d/%m/%Y')
+    year_str = datetime.now().strftime('%Y')
+    ps_normal = ParagraphStyle('n', fontSize=8, leading=10)
+    ps_bold = ParagraphStyle('b', fontSize=8, leading=10, fontName='Helvetica-Bold')
+    ps_th = ParagraphStyle('th', fontSize=8, leading=10, fontName='Helvetica-Bold', textColor=white)
+    ps_title = ParagraphStyle('title', fontSize=14, leading=16, fontName='Helvetica-Bold', alignment=TA_CENTER, textColor=HexColor('#DC3545'))
+    ps_addr = ParagraphStyle('addr', fontSize=9, leading=11)
+
+    elements.append(Spacer(1, 30))
+    elements.append(Paragraph(f"Rabat, le : {fecha_hoy}", ps_normal))
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph(f"<b>{cliente.nom_client}</b>", ps_bold))
+    elements.append(Spacer(1, 4))
+    if cliente.telephone_client:
+        elements.append(Paragraph(f"Tel: {cliente.telephone_client}", ps_addr))
+    first_poliza = polizas.first()
+    if first_poliza and first_poliza.address_client:
+        elements.append(Paragraph(first_poliza.address_client, ps_addr))
+        elements.append(Spacer(1, 10))
+
+    recus_str = '-'.join(str(p.recu) for p in polizas)
+    id_client = cliente.code_client
+    elements.append(Paragraph(f"<u>{prefix}  N\u00ba: {prefix}-{id_client}__{recus_str}_{year_str}</u>", ps_title))
     elements.append(Spacer(1, 15))
-    elements.append(_client_info_table(poliza))
-    elements.append(Spacer(1, 15))
-    elements.append(_invoice_items_table(poliza, show_payment=True))
-    elements.append(Spacer(1, 15))
-    elements.append(_terms_section())
-    elements.append(Spacer(1, 15))
-    elements.append(HRFlowable(width="100%", color=HexColor('#cccccc')))
+
+    header = [
+        Paragraph("<b>N\u00b0 Police</b>", ps_th),
+        Paragraph("<b>P\u00e9riode</b>", ps_th),
+        Paragraph("<b>D\u00e9signation</b>", ps_th),
+        Paragraph("<b>Prime Nette</b>", ps_th),
+        Paragraph("<b>Taxes</b>", ps_th),
+        Paragraph("<b>T.P</b>", ps_th),
+        Paragraph("<b>ACCESOIRES</b>", ps_th),
+        Paragraph("<b>Total TTC</b>", ps_th),
+    ]
+    data = [header]
+    tot_pn = tot_tax = tot_tp = tot_acc = tot_ttc = 0
+    for p in polizas:
+        pn = float(p.prime_net or 0)
+        tax = float(p.taxes or 0)
+        tp = float(p.tp or 0)
+        acc = float(p.accesoires or 0)
+        tot = float(p.totale or 0)
+        tot_pn += pn
+        tot_tax += tax
+        tot_tp += tp
+        tot_acc += acc
+        tot_ttc += tot
+        period = f"{p.du.strftime('%d/%m/%Y') if p.du else ''} - {p.au.strftime('%d/%m/%Y') if p.au else ''}"
+        data.append([
+            Paragraph(p.police, ps_normal), Paragraph(period, ps_normal), Paragraph(p.designation, ps_normal),
+            Paragraph(str(pn), ps_normal), Paragraph(str(tax), ps_normal), Paragraph(str(tp), ps_normal),
+            Paragraph(str(acc), ps_normal), Paragraph(str(tot), ps_normal),
+        ])
+    data.append([Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("<b>Total</b>", ps_bold),
+                 Paragraph(f"<b>{tot_pn}</b>", ps_bold), Paragraph(f"<b>{tot_tax}</b>", ps_bold),
+                 Paragraph(f"<b>{tot_tp}</b>", ps_bold), Paragraph(f"<b>{tot_acc}</b>", ps_bold),
+                 Paragraph(f"<b>{tot_ttc}</b>", ps_bold)])
+    data.append([Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("<b>Total Primes Nettes:</b>", ps_bold),
+                 Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("", ps_bold),
+                 Paragraph(f"<b>{tot_pn}</b>", ps_bold)])
+    data.append([Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("<b>Total Taxes & T.P.:</b>", ps_bold),
+                 Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("", ps_bold),
+                 Paragraph(f"<b>{tot_tax + tot_tp}</b>", ps_bold)])
+    data.append([Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("<b>Total Accessoires:</b>", ps_bold),
+                 Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("", ps_bold),
+                 Paragraph(f"<b>{tot_acc}</b>", ps_bold)])
+    data.append([Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("<b>Total TTC:</b>", ps_bold),
+                 Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("", ps_bold), Paragraph("", ps_bold),
+                 Paragraph(f"<b>{tot_ttc}</b>", ps_bold)])
+
+    avail = A4[0] - 4*cm
+    cw = [avail*0.17, avail*0.2, avail*0.18, avail*0.11, avail*0.09, avail*0.08, avail*0.1, avail*0.11]
+    t = Table(data, colWidths=cw)
+    bg_grey = HexColor('#E8E8E8')
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), HexColor('#0D6EFD')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), white),
+        ('BACKGROUND', (0, -6), (-1, -6), bg_grey),
+        ('BACKGROUND', (0, -5), (-1, -5), bg_grey),
+        ('BACKGROUND', (0, -4), (-1, -4), bg_grey),
+        ('BACKGROUND', (0, -3), (-1, -3), bg_grey),
+        ('BACKGROUND', (0, -2), (-1, -2), bg_grey),
+        ('BACKGROUND', (0, -1), (-1, -1), HexColor('#F0F0F0')),
+        ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(t)
     elements.append(_footer_section())
     doc.build(elements)
-    return _build_pdf_response(buf, f'factura_{poliza.recu}.pdf')
+    return buf
 
 
 def invoice_by_client(request, client_id):
@@ -183,195 +370,81 @@ def invoice_by_client(request, client_id):
     polizas = Poliza.objects.filter(code_client=cliente.code_client).order_by('-recu')
     if not polizas.exists():
         return render(request, 'facturacion/sin_polizas.html', {'modal': 'factures'})
-    if not REPORTLAB_AVAILABLE:
-        return HttpResponse("Reportlab no está instalado.", status=500)
-
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-                            topMargin=2*cm, bottomMargin=2*cm,
-                            leftMargin=2*cm, rightMargin=2*cm)
-    elements = []
-    elements.append(_header_table("RELEVÉ DE FACTURES", f"Client: {cliente.nom_client}"))
-    elements.append(Spacer(1, 15))
-    cl_data = [
-        [Paragraph(f"<b>CLIENT:</b> {cliente.nom_client}", ParagraphStyle('cl', fontSize=10))],
-        [Paragraph(f"Code: {cliente.code_client}", ParagraphStyle('cl', fontSize=10))],
-    ]
-    if cliente.telephone_client:
-        cl_data.append([Paragraph(f"Tel: {cliente.telephone_client}", ParagraphStyle('cl', fontSize=10))])
-    if cliente.email_client:
-        cl_data.append([Paragraph(f"Email: {cliente.email_client}", ParagraphStyle('cl', fontSize=10))])
-    cl_t = Table(cl_data, colWidths=[A4[0]-80])
-    cl_t.setStyle(TableStyle([('BOX', (0, 0), (-1, -1), 0.5, HexColor('#cccccc')), ('LEFTPADDING', (0, 0), (-1, -1), 8), ('TOPPADDING', (0, 0), (-1, -1), 4), ('BOTTOMPADDING', (0, 0), (-1, -1), 4)]))
-    elements.append(cl_t)
-    elements.append(Spacer(1, 15))
-
-    totales = polizas.aggregate(
-        tot=Sum('totale'), esp=Sum('espece'), che=Sum('cheque'),
-        vir=Sum('virement'), res=Sum('reste')
-    )
-    data = [
-        [Paragraph("<b>Recibo</b>", ParagraphStyle('th', fontSize=8)),
-         Paragraph("<b>Police</b>", ParagraphStyle('th', fontSize=8)),
-         Paragraph("<b>Asegurado</b>", ParagraphStyle('th', fontSize=8)),
-         Paragraph("<b>Total</b>", ParagraphStyle('th', fontSize=8, alignment=TA_RIGHT)),
-         Paragraph("<b>Payé</b>", ParagraphStyle('th', fontSize=8, alignment=TA_RIGHT)),
-         Paragraph("<b>Reste</b>", ParagraphStyle('th', fontSize=8, alignment=TA_RIGHT))],
-    ]
-    for p in polizas:
-        paye = p.totale - p.reste
-        data.append([
-            Paragraph(str(p.recu), ParagraphStyle('td', fontSize=8)),
-            Paragraph(p.police, ParagraphStyle('td', fontSize=8)),
-            Paragraph(p.assure, ParagraphStyle('td', fontSize=8)),
-            Paragraph(f"{p.totale} MAD", ParagraphStyle('td', fontSize=8, alignment=TA_RIGHT)),
-            Paragraph(f"{paye} MAD", ParagraphStyle('td', fontSize=8, alignment=TA_RIGHT)),
-            Paragraph(f"{p.reste} MAD", ParagraphStyle('td', fontSize=8, alignment=TA_RIGHT)),
-        ])
-    data.append([
-        Paragraph("<b>Total</b>", ParagraphStyle('tdb', fontSize=8)),
-        Paragraph("", ParagraphStyle('tdb', fontSize=8)),
-        Paragraph("", ParagraphStyle('tdb', fontSize=8)),
-        Paragraph(f"<b>{totales['tot'] or 0} MAD</b>", ParagraphStyle('tdb', fontSize=8, alignment=TA_RIGHT)),
-        Paragraph(f"<b>{(totales['tot'] or 0) - (totales['res'] or 0)} MAD</b>", ParagraphStyle('tdb', fontSize=8, alignment=TA_RIGHT)),
-        Paragraph(f"<b>{totales['res'] or 0} MAD</b>", ParagraphStyle('tdb', fontSize=8, alignment=TA_RIGHT)),
-    ])
-    col_widths = [45, 80, 100, 65, 65, 65]
-    t = Table(data, colWidths=col_widths)
-    t.setStyle(TableStyle([
-        ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#cccccc')),
-        ('BACKGROUND', (0, 0), (-1, 0), HexColor('#0d6efd')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), white),
-        ('BACKGROUND', (0, -1), (-1, -1), HexColor('#f0f0f0')),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    elements.append(t)
-    elements.append(Spacer(1, 15))
-    elements.append(HRFlowable(width="100%", color=HexColor('#cccccc')))
-    elements.append(_footer_section())
-    doc.build(elements)
-    return _build_pdf_response(buf, f'facturas_cliente_{client_id}.pdf')
+    buf = _client_pdf(cliente, polizas, "F", "FACTURE")
+    return _build_pdf_response(buf, f'{client_id}-F-global-{datetime.now().strftime("%d-%m-%Y-%H-%M-%S")}.pdf')
 
 
-def invoice_by_receipt_excel(request, pk):
-    poliza = get_object_or_404(Poliza, recu=pk)
-    if not OPENPYXL_AVAILABLE:
-        return HttpResponse("openpyxl no está instalado.", status=500)
-
+def _quittance_excel(poliza, prefix="F"):
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = f"Factura {poliza.recu}"
-
-    header_font = Font(name='Calibri', bold=True, size=14, color='FFFFFF')
-    header_fill = PatternFill(start_color='0D6EFD', end_color='0D6EFD', fill_type='solid')
-    label_font = Font(name='Calibri', bold=True, size=10)
-    normal_font = Font(name='Calibri', size=10)
-    money_font = Font(name='Calibri', size=10)
-    total_font = Font(name='Calibri', bold=True, size=11)
+    fecha_str = datetime.now().strftime('%d/%m/%Y')
+    year_str = datetime.now().strftime('%Y')
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
+    label_font = Font(name='Calibri', bold=True, size=10)
+    normal_font = Font(name='Calibri', size=10)
+    bold_font = Font(name='Calibri', bold=True, size=10)
+    title_font = Font(name='Calibri', bold=True, size=14)
     center = Alignment(horizontal='center', vertical='center')
     right_align = Alignment(horizontal='right', vertical='center')
 
-    ws.merge_cells('A1:D1')
-    ws['A1'] = COMPANY_NAME
-    ws['A1'].font = header_font
-    ws['A1'].fill = header_fill
-    ws['A1'].alignment = center
+    for r in range(1, 14):
+        ws.row_dimensions[r].height = 2
 
-    ws.merge_cells('A2:D2')
-    ws['A2'] = COMPANY_ADDRESS
-    ws['A2'].font = Font(name='Calibri', size=9, italic=True)
-    ws['A2'].alignment = center
+    ws.cell(row=14, column=3, value=f'Rabat, le : {fecha_str}').font = normal_font
+    ws.cell(row=16, column=3, value=f'{poliza.assure} {poliza.prenom}').font = bold_font
+    ws.cell(row=18, column=3, value=poliza.address_client or '').font = normal_font
+    ws.cell(row=20, column=3, value=f'{prefix}  N\u00ba: {prefix}-{str(poliza.recu).zfill(5)}-{year_str}').font = title_font
 
-    ws.merge_cells('A3:D3')
-    ws['A3'] = f"FACTURE N° {poliza.recu}"
-    ws['A3'].font = Font(name='Calibri', bold=True, size=12)
-    ws['A3'].alignment = center
+    headers = ['N\u00b0 Police', 'P\u00e9riode', 'D\u00e9signation', 'Prime Nette', 'Taxes', 'T.P', 'ACCESOIRES', 'Total TTC']
+    header_row = 22
+    for col, h in enumerate(headers, 1):
+        c = ws.cell(row=header_row, column=col, value=h)
+        c.font = Font(name='Calibri', bold=True, size=10)
+        c.border = thin_border
+        c.alignment = center
 
-    row = 5
-    ws.cell(row=row, column=1, value='Client:').font = label_font
-    ws.cell(row=row, column=2, value=f"{poliza.assure} {poliza.prenom}").font = normal_font
-    ws.merge_cells(f'B{row}:D{row}')
-    row += 1
-    ws.cell(row=row, column=1, value='Code client:').font = label_font
-    ws.cell(row=row, column=2, value=poliza.code_client).font = normal_font
-    row += 1
-    ws.cell(row=row, column=1, value='Téléphone:').font = label_font
-    ws.cell(row=row, column=2, value=poliza.telefono).font = normal_font
-    row += 1
-    ws.cell(row=row, column=1, value='Email:').font = label_font
-    ws.cell(row=row, column=2, value=poliza.email).font = normal_font
-
-    row += 2
-    headers = ['Description', 'Détails', '', 'Montant']
-    for col_idx, h in enumerate(headers, 1):
-        cell = ws.cell(row=row, column=col_idx, value=h)
-        cell.font = Font(name='Calibri', bold=True, size=10, color='FFFFFF')
-        cell.fill = PatternFill(start_color='0D6EFD', end_color='0D6EFD', fill_type='solid')
+    data_row = header_row + 1
+    ws.cell(row=data_row, column=1, value=poliza.police).border = thin_border
+    ws.cell(row=data_row, column=2, value=f"{poliza.du.strftime('%d/%m/%Y') if poliza.du else ''} - {poliza.au.strftime('%d/%m/%Y') if poliza.au else ''}").border = thin_border
+    ws.cell(row=data_row, column=3, value=poliza.designation).border = thin_border
+    for ci, val in enumerate([poliza.prime_net, poliza.taxes, poliza.tp, poliza.accesoires, poliza.totale], 4):
+        cell = ws.cell(row=data_row, column=ci, value=str(float(val)).replace('.', ','))
         cell.border = thin_border
-        if col_idx == 4:
-            cell.alignment = right_align
-        else:
-            cell.alignment = Alignment(horizontal='left', vertical='center')
-
-    items = [
-        ('Police', poliza.police),
-        ('Attestation', poliza.attestation),
-        ('Type', poliza.letype),
-        ('Produit', poliza.produit),
-        ('Matricule', poliza.matricule),
-        ('Période', f"{poliza.du.strftime('%d/%m/%Y') if poliza.du else ''} - {poliza.au.strftime('%d/%m/%Y') if poliza.au else ''}"),
-    ]
-    row += 1
-    for label, value in items:
-        ws.cell(row=row, column=1, value=label).font = label_font
-        ws.cell(row=row, column=1).border = thin_border
-        ws.merge_cells(f'B{row}:C{row}')
-        ws.cell(row=row, column=2, value=value).font = normal_font
-        ws.cell(row=row, column=2).border = thin_border
-        ws.cell(row=row, column=3).border = thin_border
-        ws.cell(row=row, column=4).border = thin_border
-        row += 1
-
-    row += 1
-    payment_items = [
-        ('Prime totale', float(poliza.totale)),
-        ('Efectivo (Espèce)', float(poliza.espece)),
-        ('Cheque', float(poliza.cheque)),
-        ('Virement (Transferencia)', float(poliza.virement)),
-        ('Reste à payer', float(poliza.reste)),
-    ]
-    for label, amount in payment_items:
-        ws.cell(row=row, column=1, value='').border = thin_border
-        ws.merge_cells(f'B{row}:C{row}')
-        ws.cell(row=row, column=2, value=label).font = total_font if label in ('Prime totale', 'Reste à payer') else normal_font
-        ws.cell(row=row, column=2).border = thin_border
-        ws.cell(row=row, column=3).border = thin_border
-        cell = ws.cell(row=row, column=4, value=amount)
-        cell.font = total_font if label in ('Prime totale', 'Reste à payer') else money_font
-        cell.number_format = '#,##0.00'
         cell.alignment = right_align
+
+    tot_row = data_row + 2
+    for label, val in [('Total Primes', poliza.prime_net), ('Total Taxes', poliza.taxes),
+                       ('Total Timbres & Accessoires', poliza.accesoires), ('Total TTC', poliza.totale)]:
+        ws.cell(row=tot_row, column=3, value=label).font = bold_font
+        ws.cell(row=tot_row, column=3).border = thin_border
+        cell = ws.cell(row=tot_row, column=4, value=str(float(val)).replace('.', ','))
+        cell.font = bold_font
         cell.border = thin_border
-        if label == 'Reste à payer':
-            cell.font = Font(name='Calibri', bold=True, size=11, color='DC3545')
-        row += 1
+        cell.alignment = right_align
+        tot_row += 1
 
-    row += 2
-    ws.merge_cells(f'A{row}:D{row}')
-    ws.cell(row=row, column=1, value='Conditions de paiement: Paiement à réception.').font = Font(name='Calibri', size=8, italic=True)
-
-    ws.column_dimensions['A'].width = 22
-    ws.column_dimensions['B'].width = 25
-    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['A'].width = 18
+    ws.column_dimensions['B'].width = 18
+    ws.column_dimensions['C'].width = 30
     ws.column_dimensions['D'].width = 15
+    ws.column_dimensions['E'].width = 12
+    ws.column_dimensions['F'].width = 8
+    ws.column_dimensions['G'].width = 18
+    ws.column_dimensions['H'].width = 15
 
+    now = datetime.now()
+    ts = f"{now.day:02d}-{now.month:02d}-{now.year}-{now.hour}-{now.minute:02d}-{now.second:02d}"
+    return wb, f'{poliza.assure}-{prefix}-{str(poliza.recu).zfill(5)}-{ts}.xls'
+
+
+def invoice_by_receipt_excel(request, pk):
+    poliza = get_object_or_404(Poliza, recu=pk)
+    wb, filename = _quittance_excel(poliza, "F")
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename="factura_{poliza.recu}.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
 
@@ -380,69 +453,10 @@ def invoice_by_receipt_excel(request, pk):
 
 def statement_by_receipt(request, pk):
     poliza = get_object_or_404(Poliza, recu=pk)
-    if not REPORTLAB_AVAILABLE:
-        return HttpResponse("Reportlab no está instalado.", status=500)
-
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-                            topMargin=2*cm, bottomMargin=2*cm,
-                            leftMargin=2*cm, rightMargin=2*cm)
-    elements = []
-    elements.append(_header_table("RELEVÉ", f"N° {poliza.recu}"))
-    elements.append(Spacer(1, 15))
-    elements.append(_client_info_table(poliza))
-    elements.append(Spacer(1, 15))
-
-    data = [
-        [Paragraph("<b>Référence</b>", ParagraphStyle('th', fontSize=9)),
-         Paragraph("<b>Détail</b>", ParagraphStyle('th', fontSize=9)),
-         Paragraph("<b>Montant</b>", ParagraphStyle('th', fontSize=9, alignment=TA_RIGHT))],
-        [Paragraph(f"Recibo N°", ParagraphStyle('td', fontSize=9)),
-         Paragraph(str(poliza.recu), ParagraphStyle('td', fontSize=9)),
-         Paragraph("", ParagraphStyle('td'))],
-        [Paragraph("Police", ParagraphStyle('td', fontSize=9)),
-         Paragraph(poliza.police, ParagraphStyle('td', fontSize=9)),
-         Paragraph("", ParagraphStyle('td'))],
-        [Paragraph("Attestation", ParagraphStyle('td', fontSize=9)),
-         Paragraph(poliza.attestation, ParagraphStyle('td', fontSize=9)),
-         Paragraph("", ParagraphStyle('td'))],
-        [Paragraph("Produit", ParagraphStyle('td', fontSize=9)),
-         Paragraph(poliza.produit, ParagraphStyle('td', fontSize=9)),
-         Paragraph("", ParagraphStyle('td'))],
-        [Paragraph("Période", ParagraphStyle('td', fontSize=9)),
-         Paragraph(f"{poliza.du.strftime('%d/%m/%Y') if poliza.du else ''} au {poliza.au.strftime('%d/%m/%Y') if poliza.au else ''}", ParagraphStyle('td', fontSize=9)),
-         Paragraph("", ParagraphStyle('td'))],
-        [Paragraph("<b>Prime totale</b>", ParagraphStyle('tdb', fontSize=10)),
-         Paragraph("", ParagraphStyle('tdb')),
-         Paragraph(f"<b>{poliza.totale} MAD</b>", ParagraphStyle('tdb', fontSize=10, alignment=TA_RIGHT))],
-    ]
-
-    paye = poliza.totale - poliza.reste
-    data.append([Paragraph("Montant payé", ParagraphStyle('td', fontSize=9)),
-                 Paragraph("", ParagraphStyle('td')),
-                 Paragraph(f"{paye} MAD", ParagraphStyle('td', fontSize=9, alignment=TA_RIGHT))])
-    data.append([Paragraph("<b>Solde actuel</b>", ParagraphStyle('tdb', fontSize=10)),
-                 Paragraph("", ParagraphStyle('tdb')),
-                 Paragraph(f"<b>{poliza.reste} MAD</b>", ParagraphStyle('tdb', fontSize=10, alignment=TA_RIGHT))])
-
-    col_widths = [100, A4[0]-80-100-60, 60]
-    t = Table(data, colWidths=col_widths)
-    t.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#cccccc')),
-        ('BACKGROUND', (0, 0), (-1, 0), HexColor('#0d6efd')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), white),
-        ('BACKGROUND', (0, -1), (-1, -1), HexColor('#fff3cd')),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    elements.append(t)
-    elements.append(Spacer(1, 15))
-    elements.append(HRFlowable(width="100%", color=HexColor('#cccccc')))
-    elements.append(_footer_section())
-    doc.build(elements)
-    return _build_pdf_response(buf, f'releve_{poliza.recu}.pdf')
+    buf = _quittance_pdf(poliza, "RELEVE")
+    now = datetime.now()
+    ts = f"{now.day:02d}-{now.month:02d}-{now.year}-{now.hour}-{now.minute:02d}-{now.second:02d}"
+    return _build_pdf_response(buf, f'{poliza.assure}-R-{str(poliza.recu).zfill(5)}-{ts}.pdf')
 
 
 def statement_by_client(request, client_id):
@@ -450,185 +464,15 @@ def statement_by_client(request, client_id):
     polizas = Poliza.objects.filter(code_client=cliente.code_client).order_by('-recu')
     if not polizas.exists():
         return render(request, 'facturacion/sin_polizas.html', {'modal': 'releves'})
-    if not REPORTLAB_AVAILABLE:
-        return HttpResponse("Reportlab no está instalado.", status=500)
-
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-                            topMargin=2*cm, bottomMargin=2*cm,
-                            leftMargin=2*cm, rightMargin=2*cm)
-    elements = []
-    elements.append(_header_table("RELEVÉ DE COMPTE", f"Client: {cliente.nom_client}"))
-    elements.append(Spacer(1, 15))
-    cl_data = [
-        [Paragraph(f"<b>CLIENT:</b> {cliente.nom_client}", ParagraphStyle('cl', fontSize=10))],
-        [Paragraph(f"Code: {cliente.code_client}", ParagraphStyle('cl', fontSize=10))],
-    ]
-    if cliente.telephone_client:
-        cl_data.append([Paragraph(f"Tel: {cliente.telephone_client}", ParagraphStyle('cl', fontSize=10))])
-    cl_t = Table(cl_data, colWidths=[A4[0]-80])
-    cl_t.setStyle(TableStyle([('BOX', (0, 0), (-1, -1), 0.5, HexColor('#cccccc')), ('LEFTPADDING', (0, 0), (-1, -1), 8), ('TOPPADDING', (0, 0), (-1, -1), 4), ('BOTTOMPADDING', (0, 0), (-1, -1), 4)]))
-    elements.append(cl_t)
-    elements.append(Spacer(1, 15))
-
-    totales = polizas.aggregate(
-        tot=Sum('totale'), esp=Sum('espece'), che=Sum('cheque'),
-        vir=Sum('virement'), res=Sum('reste')
-    )
-    data = [
-        [Paragraph("<b>Recibo</b>", ParagraphStyle('th', fontSize=8)),
-         Paragraph("<b>Police</b>", ParagraphStyle('th', fontSize=8)),
-         Paragraph("<b>Total</b>", ParagraphStyle('th', fontSize=8, alignment=TA_RIGHT)),
-         Paragraph("<b>Payé</b>", ParagraphStyle('th', fontSize=8, alignment=TA_RIGHT)),
-         Paragraph("<b>Solde</b>", ParagraphStyle('th', fontSize=8, alignment=TA_RIGHT))],
-    ]
-    for p in polizas:
-        paye = p.totale - p.reste
-        data.append([
-            Paragraph(str(p.recu), ParagraphStyle('td', fontSize=8)),
-            Paragraph(p.police, ParagraphStyle('td', fontSize=8)),
-            Paragraph(f"{p.totale} MAD", ParagraphStyle('td', fontSize=8, alignment=TA_RIGHT)),
-            Paragraph(f"{paye} MAD", ParagraphStyle('td', fontSize=8, alignment=TA_RIGHT)),
-            Paragraph(f"{p.reste} MAD", ParagraphStyle('td', fontSize=8, alignment=TA_RIGHT)),
-        ])
-    total_paye = (totales['tot'] or 0) - (totales['res'] or 0)
-    data.append([
-        Paragraph("<b>Total</b>", ParagraphStyle('tdb', fontSize=8)),
-        Paragraph("", ParagraphStyle('tdb')),
-        Paragraph(f"<b>{totales['tot'] or 0} MAD</b>", ParagraphStyle('tdb', fontSize=8, alignment=TA_RIGHT)),
-        Paragraph(f"<b>{total_paye} MAD</b>", ParagraphStyle('tdb', fontSize=8, alignment=TA_RIGHT)),
-        Paragraph(f"<b>{totales['res'] or 0} MAD</b>", ParagraphStyle('tdb', fontSize=8, alignment=TA_RIGHT)),
-    ])
-    col_widths = [45, 100, 75, 75, 75]
-    t = Table(data, colWidths=col_widths)
-    t.setStyle(TableStyle([
-        ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#cccccc')),
-        ('BACKGROUND', (0, 0), (-1, 0), HexColor('#0d6efd')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), white),
-        ('BACKGROUND', (0, -1), (-1, -1), HexColor('#fff3cd')),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    elements.append(t)
-    elements.append(Spacer(1, 15))
-    elements.append(HRFlowable(width="100%", color=HexColor('#cccccc')))
-    elements.append(_footer_section())
-    doc.build(elements)
-    return _build_pdf_response(buf, f'releve_cliente_{client_id}.pdf')
+    buf = _client_pdf(cliente, polizas, "R", "RELEVÉ")
+    return _build_pdf_response(buf, f'{client_id}-R-global-{datetime.now().strftime("%d-%m-%Y-%H-%M-%S")}.pdf')
 
 
 def statement_by_receipt_excel(request, pk):
     poliza = get_object_or_404(Poliza, recu=pk)
-    if not OPENPYXL_AVAILABLE:
-        return HttpResponse("openpyxl no está instalado.", status=500)
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = f"Relevé {poliza.recu}"
-
-    header_font = Font(name='Calibri', bold=True, size=14, color='FFFFFF')
-    header_fill = PatternFill(start_color='0D6EFD', end_color='0D6EFD', fill_type='solid')
-    label_font = Font(name='Calibri', bold=True, size=10)
-    normal_font = Font(name='Calibri', size=10)
-    total_font = Font(name='Calibri', bold=True, size=11)
-    thin_border = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin')
-    )
-    center = Alignment(horizontal='center', vertical='center')
-    right_align = Alignment(horizontal='right', vertical='center')
-
-    ws.merge_cells('A1:D1')
-    ws['A1'] = COMPANY_NAME
-    ws['A1'].font = header_font
-    ws['A1'].fill = header_fill
-    ws['A1'].alignment = center
-
-    ws.merge_cells('A2:D2')
-    ws['A2'] = COMPANY_ADDRESS
-    ws['A2'].font = Font(name='Calibri', size=9, italic=True)
-    ws['A2'].alignment = center
-
-    ws.merge_cells('A3:D3')
-    ws['A3'] = f"RELEVÉ N° {poliza.recu}"
-    ws['A3'].font = Font(name='Calibri', bold=True, size=12)
-    ws['A3'].alignment = center
-
-    row = 5
-    ws.cell(row=row, column=1, value='Client:').font = label_font
-    ws.cell(row=row, column=2, value=f"{poliza.assure} {poliza.prenom}").font = normal_font
-    ws.merge_cells(f'B{row}:D{row}')
-    row += 1
-    ws.cell(row=row, column=1, value='Police:').font = label_font
-    ws.cell(row=row, column=2, value=poliza.police).font = normal_font
-    ws.merge_cells(f'B{row}:D{row}')
-    row += 1
-    ws.cell(row=row, column=1, value='Attestation:').font = label_font
-    ws.cell(row=row, column=2, value=poliza.attestation).font = normal_font
-    ws.merge_cells(f'B{row}:D{row}')
-    row += 1
-    ws.cell(row=row, column=1, value='Produit:').font = label_font
-    ws.cell(row=row, column=2, value=poliza.produit).font = normal_font
-    ws.merge_cells(f'B{row}:D{row}')
-    row += 1
-    ws.cell(row=row, column=1, value='Période:').font = label_font
-    ws.cell(row=row, column=2, value=f"{poliza.du.strftime('%d/%m/%Y') if poliza.du else ''} - {poliza.au.strftime('%d/%m/%Y') if poliza.au else ''}").font = normal_font
-    ws.merge_cells(f'B{row}:D{row}')
-
-    row += 2
-    headers = ['Référence', 'Détail', '', 'Montant']
-    for col_idx, h in enumerate(headers, 1):
-        cell = ws.cell(row=row, column=col_idx, value=h)
-        cell.font = Font(name='Calibri', bold=True, size=10, color='FFFFFF')
-        cell.fill = PatternFill(start_color='0D6EFD', end_color='0D6EFD', fill_type='solid')
-        cell.border = thin_border
-        cell.alignment = right_align if col_idx == 4 else Alignment(horizontal='left', vertical='center')
-
-    row += 1
-    ws.merge_cells(f'A{row}:C{row}')
-    ws.cell(row=row, column=1, value='Prime totale').font = normal_font
-    ws.cell(row=row, column=1).border = thin_border
-    ws.cell(row=row, column=2).border = thin_border
-    ws.cell(row=row, column=3).border = thin_border
-    cell = ws.cell(row=row, column=4, value=float(poliza.totale))
-    cell.font = total_font
-    cell.number_format = '#,##0.00'
-    cell.alignment = right_align
-    cell.border = thin_border
-    row += 1
-
-    paye = poliza.totale - poliza.reste
-    ws.merge_cells(f'A{row}:C{row}')
-    ws.cell(row=row, column=1, value='Montant payé').font = normal_font
-    ws.cell(row=row, column=1).border = thin_border
-    ws.cell(row=row, column=2).border = thin_border
-    ws.cell(row=row, column=3).border = thin_border
-    cell = ws.cell(row=row, column=4, value=float(paye))
-    cell.font = normal_font
-    cell.number_format = '#,##0.00'
-    cell.alignment = right_align
-    cell.border = thin_border
-    row += 1
-
-    ws.merge_cells(f'A{row}:C{row}')
-    ws.cell(row=row, column=1, value='Solde actuel').font = Font(name='Calibri', bold=True, size=11, color='DC3545')
-    ws.cell(row=row, column=1).border = thin_border
-    ws.cell(row=row, column=2).border = thin_border
-    ws.cell(row=row, column=3).border = thin_border
-    cell = ws.cell(row=row, column=4, value=float(poliza.reste))
-    cell.font = Font(name='Calibri', bold=True, size=11, color='DC3545')
-    cell.number_format = '#,##0.00'
-    cell.alignment = right_align
-    cell.border = thin_border
-
-    ws.column_dimensions['A'].width = 22
-    ws.column_dimensions['B'].width = 25
-    ws.column_dimensions['C'].width = 20
-    ws.column_dimensions['D'].width = 15
-
+    wb, filename = _quittance_excel(poliza, "R")
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename="releve_{poliza.recu}.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
 
@@ -752,37 +596,84 @@ def invoice_list_by_client(request, client_id):
     polizas = Poliza.objects.filter(code_client=client_id).order_by('-recu')
     cliente = Cliente.objects.filter(code_client=client_id).first()
     cliente_nom = cliente.nom_client if cliente else str(client_id)
+    cliente_adresse = ''
+    primer_recu = ''
+    if polizas.exists():
+        primer_recu = polizas.first().recu
+        cliente_adresse = polizas.first().address_client or ''
 
     if 'export_excel' in request.GET:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = f'Facturas {client_id}'
-        headers = ['Recibo', 'Fecha', 'Tipo', 'Póliza', 'Matrícula', 'Désignation',
-                   'Prime Nette', 'Taxes', 'TP', 'Accessoires', 'Total TTC', 'Resto']
+        fecha_str = datetime.now().strftime('%d/%m/%Y')
+        facture_num = f"F-{client_id}__{primer_recu}_{fecha_str}"
+        thin_border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+        for r in range(1, 14):
+            ws.row_dimensions[r].height = 2
+
+        ws.merge_cells('A1:H1')
+        ws['A1'] = f'Rabat, le : {fecha_str}'
+        ws['A1'].font = Font(name='Calibri', size=10)
+        ws.merge_cells('A3:H3')
+        ws['A3'] = cliente_nom
+        ws['A3'].font = Font(name='Calibri', bold=True, size=10)
+        ws.merge_cells('A5:H5')
+        ws['A5'] = cliente_adresse
+        ws['A5'].font = Font(name='Calibri', size=10)
+        ws.merge_cells('A7:H7')
+        ws['A7'] = f'FACTURE  N\u00ba: {facture_num}'
+        ws['A7'].font = Font(name='Calibri', bold=True, size=12)
+
+        header_row = 9
+        headers = ['N\u00b0 Police', 'P\u00e9riode', 'D\u00e9signation', 'Prime Nette', 'Taxes', 'T.P', 'Accessoires', 'Total TTC']
         header_fill = PatternFill(start_color='0D6EFD', end_color='0D6EFD', fill_type='solid')
         header_font = Font(name='Calibri', bold=True, size=10, color='FFFFFF')
         for col, h in enumerate(headers, 1):
-            c = ws.cell(row=1, column=col, value=h)
+            c = ws.cell(row=header_row, column=col, value=h)
             c.font = header_font
             c.fill = header_fill
             c.alignment = Alignment(horizontal='center')
-        for row, p in enumerate(polizas, 2):
-            ws.cell(row=row, column=1, value=p.recu)
-            ws.cell(row=row, column=2, value=p.fecha_hoy.strftime('%d/%m/%Y') if p.fecha_hoy else '')
-            ws.cell(row=row, column=3, value=p.letype)
-            ws.cell(row=row, column=4, value=p.police)
-            ws.cell(row=row, column=5, value=p.matricule)
-            ws.cell(row=row, column=6, value=p.designation)
-            ws.cell(row=row, column=7, value=float(p.prime_net))
-            ws.cell(row=row, column=8, value=float(p.taxes))
-            ws.cell(row=row, column=9, value=float(p.tp))
-            ws.cell(row=row, column=10, value=float(p.accesoires))
-            ws.cell(row=row, column=11, value=float(p.totale))
-            ws.cell(row=row, column=12, value=float(p.reste))
-        for col_letter in ['A','B','C','D','E','F','G','H','I','J','K','L']:
-            ws.column_dimensions[col_letter].width = 15
+            c.border = thin_border
+
+        data_row = header_row + 1
+        tot_prime = tot_taxes = tot_tp = tot_acces = tot_ttc = 0
+        for p in polizas:
+            ws.cell(row=data_row, column=1, value=p.police).border = thin_border
+            periode = f"{p.du.strftime('%d/%m/%Y') if p.du else ''} - {p.au.strftime('%d/%m/%Y') if p.au else ''}"
+            ws.cell(row=data_row, column=2, value=periode).border = thin_border
+            ws.cell(row=data_row, column=3, value=p.designation).border = thin_border
+            ws.cell(row=data_row, column=4, value=str(float(p.prime_net)).replace('.', ',')).border = thin_border
+            ws.cell(row=data_row, column=5, value=str(float(p.taxes)).replace('.', ',')).border = thin_border
+            ws.cell(row=data_row, column=6, value=str(float(p.tp)).replace('.', ',')).border = thin_border
+            ws.cell(row=data_row, column=7, value=str(float(p.accesoires)).replace('.', ',')).border = thin_border
+            ws.cell(row=data_row, column=8, value=str(float(p.totale)).replace('.', ',')).border = thin_border
+            tot_prime += float(p.prime_net)
+            tot_taxes += float(p.taxes)
+            tot_tp += float(p.tp)
+            tot_acces += float(p.accesoires)
+            tot_ttc += float(p.totale)
+            data_row += 1
+
+        ws.cell(row=data_row, column=3, value='Total Primes Nettes').font = Font(bold=True)
+        ws.cell(row=data_row, column=4, value=str(tot_prime).replace('.', ',')).font = Font(bold=True)
+        data_row += 1
+        ws.cell(row=data_row, column=3, value='Total Taxes & T.P').font = Font(bold=True)
+        ws.cell(row=data_row, column=4, value=str(tot_taxes + tot_tp).replace('.', ',')).font = Font(bold=True)
+        data_row += 1
+        ws.cell(row=data_row, column=3, value='Total Accessoires').font = Font(bold=True)
+        ws.cell(row=data_row, column=4, value=str(tot_acces).replace('.', ',')).font = Font(bold=True)
+        data_row += 1
+        ws.cell(row=data_row, column=3, value='Total TTC').font = Font(bold=True)
+        ws.cell(row=data_row, column=4, value=str(tot_ttc).replace('.', ',')).font = Font(bold=True)
+
+        for col_letter in ['A','B','C','D','E','F','G','H']:
+            ws.column_dimensions[col_letter].width = 18
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="facturas_{client_id}.xlsx"'
+        response['Content-Disposition'] = f'attachment; filename="{client_id}-F-{str(primer_recu).zfill(5)}-{datetime.now().strftime("%d-%m-%Y-%H-%M-%S")}.xls"'
         wb.save(response)
         return response
 
@@ -790,6 +681,9 @@ def invoice_list_by_client(request, client_id):
         'polizas': polizas,
         'cliente_nom': cliente_nom,
         'cliente_code': client_id,
+        'cliente_adresse': cliente_adresse,
+        'primer_recu': primer_recu,
+        'fecha_hoy': datetime.now().strftime('%d/%m/%Y'),
     })
 
 
@@ -797,37 +691,84 @@ def statement_list_by_client(request, client_id):
     polizas = Poliza.objects.filter(code_client=client_id).order_by('-recu')
     cliente = Cliente.objects.filter(code_client=client_id).first()
     cliente_nom = cliente.nom_client if cliente else str(client_id)
+    cliente_adresse = ''
+    primer_recu = ''
+    if polizas.exists():
+        primer_recu = polizas.first().recu
+        cliente_adresse = polizas.first().address_client or ''
 
     if 'export_excel' in request.GET:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = f'Relevés {client_id}'
-        headers = ['Recibo', 'Fecha', 'Tipo', 'Póliza', 'Matrícula', 'Désignation',
-                   'Prime Nette', 'Taxes', 'TP', 'Accessoires', 'Total TTC', 'Resto']
+        fecha_str = datetime.now().strftime('%d/%m/%Y')
+        releve_num = f"R-{client_id}__{primer_recu}_{fecha_str}"
+        thin_border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+        for r in range(1, 14):
+            ws.row_dimensions[r].height = 2
+
+        ws.merge_cells('A1:H1')
+        ws['A1'] = f'Rabat, le : {fecha_str}'
+        ws['A1'].font = Font(name='Calibri', size=10)
+        ws.merge_cells('A3:H3')
+        ws['A3'] = cliente_nom
+        ws['A3'].font = Font(name='Calibri', bold=True, size=10)
+        ws.merge_cells('A5:H5')
+        ws['A5'] = cliente_adresse
+        ws['A5'].font = Font(name='Calibri', size=10)
+        ws.merge_cells('A7:H7')
+        ws['A7'] = f'RELEVÉ  N\u00ba: {releve_num}'
+        ws['A7'].font = Font(name='Calibri', bold=True, size=12)
+
+        header_row = 9
+        headers = ['N\u00b0 Police', 'P\u00e9riode', 'D\u00e9signation', 'Prime Nette', 'Taxes', 'T.P', 'Accessoires', 'Total TTC']
         header_fill = PatternFill(start_color='198754', end_color='198754', fill_type='solid')
         header_font = Font(name='Calibri', bold=True, size=10, color='FFFFFF')
         for col, h in enumerate(headers, 1):
-            c = ws.cell(row=1, column=col, value=h)
+            c = ws.cell(row=header_row, column=col, value=h)
             c.font = header_font
             c.fill = header_fill
             c.alignment = Alignment(horizontal='center')
-        for row, p in enumerate(polizas, 2):
-            ws.cell(row=row, column=1, value=p.recu)
-            ws.cell(row=row, column=2, value=p.fecha_hoy.strftime('%d/%m/%Y') if p.fecha_hoy else '')
-            ws.cell(row=row, column=3, value=p.letype)
-            ws.cell(row=row, column=4, value=p.police)
-            ws.cell(row=row, column=5, value=p.matricule)
-            ws.cell(row=row, column=6, value=p.designation)
-            ws.cell(row=row, column=7, value=float(p.prime_net))
-            ws.cell(row=row, column=8, value=float(p.taxes))
-            ws.cell(row=row, column=9, value=float(p.tp))
-            ws.cell(row=row, column=10, value=float(p.accesoires))
-            ws.cell(row=row, column=11, value=float(p.totale))
-            ws.cell(row=row, column=12, value=float(p.reste))
-        for col_letter in ['A','B','C','D','E','F','G','H','I','J','K','L']:
-            ws.column_dimensions[col_letter].width = 15
+            c.border = thin_border
+
+        data_row = header_row + 1
+        tot_prime = tot_taxes = tot_tp = tot_acces = tot_ttc = 0
+        for p in polizas:
+            ws.cell(row=data_row, column=1, value=p.police).border = thin_border
+            periode = f"{p.du.strftime('%d/%m/%Y') if p.du else ''} - {p.au.strftime('%d/%m/%Y') if p.au else ''}"
+            ws.cell(row=data_row, column=2, value=periode).border = thin_border
+            ws.cell(row=data_row, column=3, value=p.designation).border = thin_border
+            ws.cell(row=data_row, column=4, value=str(float(p.prime_net)).replace('.', ',')).border = thin_border
+            ws.cell(row=data_row, column=5, value=str(float(p.taxes)).replace('.', ',')).border = thin_border
+            ws.cell(row=data_row, column=6, value=str(float(p.tp)).replace('.', ',')).border = thin_border
+            ws.cell(row=data_row, column=7, value=str(float(p.accesoires)).replace('.', ',')).border = thin_border
+            ws.cell(row=data_row, column=8, value=str(float(p.totale)).replace('.', ',')).border = thin_border
+            tot_prime += float(p.prime_net)
+            tot_taxes += float(p.taxes)
+            tot_tp += float(p.tp)
+            tot_acces += float(p.accesoires)
+            tot_ttc += float(p.totale)
+            data_row += 1
+
+        ws.cell(row=data_row, column=3, value='Total Primes Nettes').font = Font(bold=True)
+        ws.cell(row=data_row, column=4, value=str(tot_prime).replace('.', ',')).font = Font(bold=True)
+        data_row += 1
+        ws.cell(row=data_row, column=3, value='Total Taxes & T.P').font = Font(bold=True)
+        ws.cell(row=data_row, column=4, value=str(tot_taxes + tot_tp).replace('.', ',')).font = Font(bold=True)
+        data_row += 1
+        ws.cell(row=data_row, column=3, value='Total Accessoires').font = Font(bold=True)
+        ws.cell(row=data_row, column=4, value=str(tot_acces).replace('.', ',')).font = Font(bold=True)
+        data_row += 1
+        ws.cell(row=data_row, column=3, value='Total TTC').font = Font(bold=True)
+        ws.cell(row=data_row, column=4, value=str(tot_ttc).replace('.', ',')).font = Font(bold=True)
+
+        for col_letter in ['A','B','C','D','E','F','G','H']:
+            ws.column_dimensions[col_letter].width = 18
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="releves_{client_id}.xlsx"'
+        response['Content-Disposition'] = f'attachment; filename="{client_id}-R-{str(primer_recu).zfill(5)}-{datetime.now().strftime("%d-%m-%Y-%H-%M-%S")}.xls"'
         wb.save(response)
         return response
 
@@ -835,4 +776,7 @@ def statement_list_by_client(request, client_id):
         'polizas': polizas,
         'cliente_nom': cliente_nom,
         'cliente_code': client_id,
+        'cliente_adresse': cliente_adresse,
+        'primer_recu': primer_recu,
+        'fecha_hoy': datetime.now().strftime('%d/%m/%Y'),
     })

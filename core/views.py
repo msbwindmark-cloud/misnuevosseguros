@@ -434,10 +434,16 @@ def backup_view(request):
                 try:
                     msg.send()
                     messages.success(request, 'Email enviado correctamente')
+                    with open(log_path, 'a', encoding='utf-8') as f:
+                        f.write(f'Correo enviado con éxito {fecha}\n')
                 except Exception as e:
                     messages.error(request, f'Error al enviar email: {e}')
+                    with open(log_path, 'a', encoding='utf-8') as f:
+                        f.write(f'Error al enviar correo {fecha}: {e}\n')
             else:
                 messages.warning(request, 'No hay emails configurados')
+                with open(log_path, 'a', encoding='utf-8') as f:
+                    f.write(f'No hay emails configurados {fecha}\n')
 
         return render(request, 'core/backup.html', context)
 

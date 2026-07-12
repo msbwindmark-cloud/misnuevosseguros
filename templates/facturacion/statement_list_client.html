@@ -1,47 +1,211 @@
 {% extends 'base.html' %}
-{% block title %}Relevés por Cliente - Proyecto SIS{% endblock %}
+{% block title %}Relevés - {{ cliente_nom }} - Proyecto SIS{% endblock %}
 {% block content %}
+<style>
+    #tablaReleves tbody tr.selected { background-color: #cce5ff !important; }
+</style>
 <div class="card">
-    <div class="card-header bg-dark text-white d-flex justify-content-between">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h4 class="mb-0"><i class="fas fa-file-invoice"></i> Relevés - {{ cliente_nom }}</h4>
         <div>
             <a href="{% url 'statement_by_client' cliente_code %}" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF Global</a>
-            <a href="{% url 'statement_list_by_client' cliente_code %}?export_excel=1" class="btn btn-info btn-sm"><i class="fas fa-file-excel"></i> Excel</a>
-            <a href="{% url 'poliza_list' %}#releves" class="btn btn-light btn-sm">Volver</a>
+            <button type="button" class="btn btn-info btn-sm" id="btnExportExcelR"><i class="fas fa-file-excel"></i> La liste en excel</button>
+            <button type="button" class="btn btn-success btn-sm" id="btnExporterFusionneR"><i class="fas fa-file-excel"></i> Exporter Fusionné (Taxes+TP)</button>
+            <button type="button" class="btn btn-success btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Imprimer toute la liste</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnEliminarLineaR"><i class="fas fa-trash"></i> Eliminer la ligne sélectionnée</button>
+            <a href="{% url 'poliza_list' %}#releves" class="btn btn-light btn-sm"><i class="fas fa-arrow-left"></i> Retourner a la liste</a>
         </div>
     </div>
     <div class="card-body">
-        <table class="table table-hover datatable">
-            <thead>
-                <tr>
-                    <th>Recibo</th>
-                    <th>Póliza</th>
-                    <th>Desde</th>
-                    <th>Hasta</th>
-                    <th>Total</th>
-                    <th>Resto</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in polizas %}
-                <tr>
-                    <td>{{ p.recu }}</td>
-                    <td>{{ p.police }}</td>
-                    <td>{{ p.du|date:"d/m/Y" }}</td>
-                    <td>{{ p.au|date:"d/m/Y" }}</td>
-                    <td>{{ p.totale }} MAD</td>
-                    <td>{{ p.reste }} MAD</td>
-                    <td>
-                        <a href="{% url 'statement_by_receipt' p.recu %}" class="btn btn-sm btn-warning" title="Relevé PDF"><i class="fas fa-file-invoice"></i></a>
-                        <a href="{% url 'statement_by_receipt_excel' p.recu %}" class="btn btn-sm btn-info" title="Relevé Excel"><i class="fas fa-file-excel"></i></a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="7" class="text-center">No hay pólizas</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="mb-3">
+            <span class="text-muted">Rabat, le : {{ fecha_hoy }}</span>
+        </div>
+        <div class="mb-2">
+            <strong>{{ cliente_nom }}</strong>
+        </div>
+        <div class="mb-2">
+            <span>{{ cliente_adresse }}</span>
+        </div>
+        <div class="mb-3">
+            <strong id="el_cliente" style="font-size:1.2em; color:#dc3545; text-decoration:underline;">RELEVÉ &ordm;: R-{{ cliente_code }}__{{ primer_recu }}_{{ fecha_hoy }}</strong>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover" id="tablaReleves">
+                <thead>
+                    <tr>
+                        <th class="no-sort" style="width:1%"><input type="checkbox" id="checkTodosR" class="form-check-input" title="Seleccionar todo"></th>
+                        <th>N&deg; Police</th>
+                        <th>P&eacute;riode</th>
+                        <th>D&eacute;signation</th>
+                        <th>Prime Nette</th>
+                        <th>Taxes</th>
+                        <th>T.P</th>
+                        <th>Accessoires</th>
+                        <th>Total TTC</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in polizas %}
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input check-releve" value="{{ p.recu }}"></td>
+                        <td>{{ p.police }}</td>
+                        <td>{{ p.du|date:"d/m/Y" }} - {{ p.au|date:"d/m/Y" }}</td>
+                        <td>{{ p.designation }}</td>
+                        <td>{{ p.prime_net }}</td>
+                        <td>{{ p.taxes }}</td>
+                        <td>{{ p.tp }}</td>
+                        <td>{{ p.accesoires }}</td>
+                        <td>{{ p.totale }}</td>
+                        <td>
+                            <a href="{% url 'statement_by_receipt' p.recu %}" class="btn btn-sm btn-warning" title="Relevé PDF"><i class="fas fa-file-invoice"></i></a>
+                            <a href="{% url 'statement_by_receipt_excel' p.recu %}" class="btn btn-sm btn-info" title="Relevé Excel"><i class="fas fa-file-excel"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="10" class="text-center">No hay pólizas</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td></td>
+                        <td colspan="3" class="text-end"><strong>Total</strong></td>
+                        <td id="monto_prime_net_r">0</td>
+                        <td id="monto_taxes_r">0</td>
+                        <td id="monto_tp_r">0</td>
+                        <td id="monto_accesoires_r">0</td>
+                        <td id="monto_total_r">0</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
     </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    var tablaReleves = $('#tablaReleves').DataTable({
+        language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
+        lengthMenu: [5, 10, 25, 50, 100],
+        pageLength: 5,
+        order: [[1, 'desc']],
+        columnDefs: [{ orderable: false, targets: 0 }],
+        drawCallback: function () {
+            var api = this.api();
+            function sumCol(idx) {
+                var total = 0;
+                api.column(idx, {"filter":"applied"}).data().each(function (val) {
+                    total += parseFloat(val.replace(/\./g, '').replace(',', '.')) || 0;
+                });
+                return total;
+            }
+            $('#monto_prime_net_r').html(sumCol(4).toFixed(2));
+            $('#monto_taxes_r').html(sumCol(5).toFixed(2));
+            $('#monto_tp_r').html(sumCol(6).toFixed(2));
+            $('#monto_accesoires_r').html(sumCol(7).toFixed(2));
+            $('#monto_total_r').html(sumCol(8).toFixed(2));
+        }
+    });
+
+    $('#checkTodosR').on('change', function () {
+        var checked = $(this).prop('checked');
+        tablaReleves.$('input.check-releve').prop('checked', checked);
+    });
+
+    // Click row to select (single) - skip clicks on links/buttons/checkboxes
+    $('#tablaReleves tbody').on('click', 'tr', function (e) {
+        if ($(e.target).is('a, button, input[type="checkbox"]')) return;
+        if ($(this).hasClass('selected')) {
+            $(this).removeClass('selected');
+        } else {
+            tablaReleves.$('tr.selected').removeClass('selected');
+            $(this).addClass('selected');
+        }
+    });
+
+    // Eliminer la ligne sélectionnée - works with both row click AND checkboxes
+    $('#btnEliminarLineaR').click(function () {
+        var selRow = tablaReleves.row('.selected');
+        if (selRow.node()) {
+            selRow.remove().draw(false);
+            return;
+        }
+        tablaReleves.$('input.check-releve:checked').each(function () {
+            tablaReleves.row($(this).closest('tr')).remove();
+        });
+        tablaReleves.draw(false);
+    });
+
+    // Excel export matching PHP: R_{client}_{YYYY}-{M}-{D}.xls
+    $('#btnExportExcelR').on('click', function () {
+        var d = new Date();
+        var n = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+        var le_client = '{{ cliente_nom }}';
+        var titulo = 'R_' + le_client + '_' + n;
+        var tabla = document.getElementById('tablaReleves');
+        var clon = tabla.cloneNode(true);
+        var csv = [];
+        var rows = clon.querySelectorAll('tr');
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            var cols = row.querySelectorAll('td, th');
+            var rowData = [];
+            for (var j = 0; j < cols.length; j++) {
+                rowData.push(cols[j].innerText.replace(/;/g, ','));
+            }
+            csv.push(rowData.join(';'));
+        }
+        var blob = new Blob(['\uFEFF' + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = titulo + '.xls';
+        link.click();
+    });
+
+    // Fusionné export matching PHP: R_{client}_{YYYY}-{M}-{D}_Fusionnee.xls
+    $('#btnExporterFusionneR').on('click', function () {
+        var d = new Date();
+        var n = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+        var le_client = '{{ cliente_nom }}';
+        var titulo = 'R_' + le_client + '_' + n;
+        var tabla = document.getElementById('tablaReleves');
+        var clon = tabla.cloneNode(true);
+        var theadRows = clon.querySelectorAll('thead tr');
+        if (theadRows.length > 0) {
+            var ths = theadRows[0].querySelectorAll('th');
+            if (ths.length >= 7) {
+                ths[5].innerHTML = 'Taxes & T.P.';
+                ths[6].style.display = 'none';
+            }
+        }
+        var tbodyRows = clon.querySelectorAll('tbody tr');
+        tbodyRows.forEach(function(row) {
+            var celdas = row.querySelectorAll('td');
+            if (celdas.length >= 8) {
+                var taxes = parseFloat(celdas[5].textContent.replace(/\./g, '').replace(',', '.')) || 0;
+                var tp = parseFloat(celdas[6].textContent.replace(/\./g, '').replace(',', '.')) || 0;
+                celdas[5].textContent = (taxes + tp).toFixed(2);
+                celdas[6].style.display = 'none';
+            }
+        });
+        var csv = [];
+        var rows = clon.querySelectorAll('tr');
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            var cols = row.querySelectorAll('td, th');
+            var rowData = [];
+            for (var j = 0; j < cols.length; j++) {
+                if (cols[j].style.display === 'none') continue;
+                rowData.push(cols[j].innerText.replace(/;/g, ','));
+            }
+            csv.push(rowData.join(';'));
+        }
+        var blob = new Blob(['\uFEFF' + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = titulo + '_Fusionnee.xls';
+        link.click();
+    });
+</script>
 {% endblock %}

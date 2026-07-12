@@ -137,7 +137,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <input type="text" id="buscarClienteF" class="form-control mb-2" placeholder="Rechercher un client...">
                 <div class="table-responsive">
                     <table class="table table-hover" id="laListaClientesF">
                         <thead>
@@ -189,7 +188,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <input type="text" id="buscarClienteR" class="form-control mb-2" placeholder="Rechercher un client...">
                 <div class="table-responsive">
                     <table class="table table-hover" id="laListaClientesR">
                         <thead>
@@ -302,21 +300,23 @@
         });
     });
 
-    function filtrarTablaModal(inputId, tablaId) {
-        var filtro = document.getElementById(inputId).value.toLowerCase();
-        var filas = document.querySelectorAll('#' + tablaId + ' tbody tr');
-        filas.forEach(function (fila) {
-            if (fila.querySelectorAll('td').length < 2) return;
-            var texto = fila.querySelector('.nom-client').textContent.toLowerCase() + ' ' +
-                        fila.querySelector('td').textContent.toLowerCase();
-            fila.style.display = texto.indexOf(filtro) > -1 ? '' : 'none';
-        });
-    }
-    document.getElementById('buscarClienteF').addEventListener('keyup', function () {
-        filtrarTablaModal('buscarClienteF', 'laListaClientesF');
+    var tablaClientesF = $('#laListaClientesF').DataTable({
+        language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
+        pageLength: 5,
+        lengthMenu: [5, 10, 25, 50],
+        order: [[0, 'asc']],
+        searching: true,
+        paging: true,
+        info: true
     });
-    document.getElementById('buscarClienteR').addEventListener('keyup', function () {
-        filtrarTablaModal('buscarClienteR', 'laListaClientesR');
+    var tablaClientesR = $('#laListaClientesR').DataTable({
+        language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
+        pageLength: 5,
+        lengthMenu: [5, 10, 25, 50],
+        order: [[0, 'asc']],
+        searching: true,
+        paging: true,
+        info: true
     });
     if (window.location.hash === '#factures') {
         var mf = new bootstrap.Modal(document.getElementById('modalFactures'));

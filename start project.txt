@@ -1,5 +1,8 @@
 
 
+MAIL_HOST_USER="msb.duck@gmail.com"
+hpsi lzkh rksd suut
+
 
 
 
