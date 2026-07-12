@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
 {% block title %}Envíos Bancarios - Proyecto SIS{% endblock %}
 {% block content %}
+<div class="mb-3 d-flex gap-2 flex-wrap">
+    <a href="{% url 'envio_banco_list' %}" class="btn btn-sm btn-primary"><i class="fas fa-exchange-alt"></i> Envíos</a>
+    <a href="{% url 'banco_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-university"></i> Bancos</a>
+    <a href="{% url 'benificiario_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-hand-holding-usd"></i> Beneficiarios</a>
+</div>
 <div class="card">
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h4 class="mb-0"><i class="fas fa-exchange-alt"></i> Lista de Envíos Bancarios</h4>
@@ -8,7 +13,6 @@
             <a href="{% url 'envio_banco_list_pdf' %}" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF Lista</a>
             <a href="{% url 'export_envios_banco_excel' %}" class="btn btn-info btn-sm"><i class="fas fa-file-excel"></i> Excel</a>
             <a href="{% url 'envio_banco_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nuevo Envío</a>
-            <a href="{% url 'poliza_list' %}" class="btn btn-light btn-sm"><i class="fas fa-arrow-left"></i> Volver a Polizas</a>
         </div>
     </div>
     <div class="card-body">

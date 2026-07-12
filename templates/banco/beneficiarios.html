@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
 {% block title %}Beneficiarios - Proyecto SIS{% endblock %}
 {% block content %}
+<div class="mb-3 d-flex gap-2 flex-wrap">
+    <a href="{% url 'envio_banco_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-exchange-alt"></i> Envíos</a>
+    <a href="{% url 'banco_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-university"></i> Bancos</a>
+    <a href="{% url 'benificiario_list' %}" class="btn btn-sm btn-primary"><i class="fas fa-hand-holding-usd"></i> Beneficiarios</a>
+</div>
 <div class="card">
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h4 class="mb-0"><i class="fas fa-hand-holding-usd"></i> Lista de Beneficiarios</h4>

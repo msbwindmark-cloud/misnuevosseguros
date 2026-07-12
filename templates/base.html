@@ -40,6 +40,24 @@
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-university"></i> Virement
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'envio_banco_create' %}">Generar Virement</a></li>
+                            <li><a class="dropdown-item" href="{% url 'envio_banco_list' %}">Lista de Virements</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-truck"></i> Courrier
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'courrier_create' %}">Generar Courrier</a></li>
+                            <li><a class="dropdown-item" href="{% url 'courrier_list' %}">Lista de Courrier</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-users"></i> Clientes
                         </a>
                         <ul class="dropdown-menu">
