@@ -20,7 +20,7 @@ SECRET_KEY = 'django-insecure-^_*5#-o4&1fylh!h2$ski#-&b8pk5e=+qyq=*)*-hi4xzzp+v*
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['misnuevosseguros.pythonanywhere.com', 'localhost', '127.0.0.1']
 
 AUTH_USER_MODEL = 'usuarios.Usuario'
 
