@@ -161,59 +161,15 @@ $(document).ready(function() {
     }
     window.notificarSalat = notificarSalat;
 
-    var adhanAudioCtx = null;
+    var adhanAudio = new Audio('/static/audio/adhan.mp3');
     var adhanSonando = false;
 
     function reproducirAdhan() {
         if (adhanSonando) return;
-        try {
-            if (!adhanAudioCtx) adhanAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (adhanAudioCtx.state === 'suspended') adhanAudioCtx.resume();
-            adhanSonando = true;
-            var ctx = adhanAudioCtx;
-            var now = ctx.currentTime;
-            var duracion = 30;
-            var masterGain = ctx.createGain();
-            masterGain.gain.setValueAtTime(0, now);
-            masterGain.gain.linearRampToValueAtTime(0.3, now + 1);
-            masterGain.gain.setValueAtTime(0.3, now + duracion - 2);
-            masterGain.gain.linearRampToValueAtTime(0, now + duracion);
-            masterGain.connect(ctx.destination);
-            var notas = [
-                { f: 392, t: 0, d: 2 },
-                { f: 440, t: 2, d: 1.5 },
-                { f: 523, t: 3.5, d: 2.5 },
-                { f: 440, t: 6, d: 1.5 },
-                { f: 523, t: 7.5, d: 3 },
-                { f: 587, t: 11, d: 2 },
-                { f: 523, t: 13, d: 1.5 },
-                { f: 440, t: 14.5, d: 2 },
-                { f: 392, t: 16.5, d: 1.5 },
-                { f: 440, t: 18, d: 2.5 },
-                { f: 523, t: 20.5, d: 2 },
-                { f: 587, t: 22.5, d: 1.5 },
-                { f: 523, t: 24, d: 2 },
-                { f: 440, t: 26, d: 2 },
-                { f: 392, t: 28, d: 2 },
-            ];
-            notas.forEach(function(n) {
-                var osc = ctx.createOscillator();
-                var env = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(n.f, now + n.t);
-                env.gain.setValueAtTime(0, now + n.t);
-                env.gain.linearRampToValueAtTime(0.35, now + n.t + 0.15);
-                env.gain.setValueAtTime(0.35, now + n.t + n.d - 0.3);
-                env.gain.linearRampToValueAtTime(0, now + n.t + n.d);
-                osc.connect(env);
-                env.connect(masterGain);
-                osc.start(now + n.t);
-                osc.stop(now + n.t + n.d);
-            });
-            setTimeout(function() { adhanSonando = false; }, duracion * 1000 + 500);
-        } catch (e) {
-            adhanSonando = false;
-        }
+        adhanSonando = true;
+        adhanAudio.currentTime = 0;
+        adhanAudio.play().catch(function() {});
+        adhanAudio.onended = function() { adhanSonando = false; };
     }
     window.reproducirAdhan = reproducirAdhan;
 
