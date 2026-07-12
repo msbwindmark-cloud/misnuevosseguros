@@ -82,9 +82,14 @@ def import_attestations_excel(request):
 @staff_member_required
 def attestation_delete(request):
     if request.method == 'POST':
-        ids = request.POST.getlist('ids[]')
-        if ids:
-            cantidad = Attestation.objects.filter(id__in=ids).delete()[0]
-            return JsonResponse({'ok': True, 'cantidad': cantidad})
-        return JsonResponse({'ok': False, 'error': 'No se seleccionaron registros'})
-    return JsonResponse({'ok': False, 'error': 'Método no permitido'})
+        raw = request.POST.get('ids') or request.POST.get('ids[]')
+        if not raw:
+            ids_list = request.POST.getlist('ids[]')
+        else:
+            ids_list = [i.strip() for i in str(raw).split(',') if i.strip()]
+        if ids_list:
+            cantidad = Attestation.objects.filter(id__in=ids_list).delete()[0]
+            messages.success(request, f'{cantidad} atestación(es) eliminada(s).')
+        else:
+            messages.error(request, 'No se seleccionaron registros.')
+    return redirect('attestation_list')

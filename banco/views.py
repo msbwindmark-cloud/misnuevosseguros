@@ -104,41 +104,125 @@ class EnvioBancoDeleteView(DeleteView):
 
 @staff_member_required
 def envio_banco_pdf(request, pk):
+    from num2words import num2words
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas as canvasmod
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors as rl_colors
+
     try:
         envio = EnvioBanco.objects.get(pk=pk)
     except EnvioBanco.DoesNotExist:
         return HttpResponse('Envío no encontrado', status=404)
+
+    banco = envio.banco
+    fecha = envio.date_envoie.strftime('%d/%m/%Y') if envio.date_envoie else ''
+    montant = float(envio.montant_envoie)
+    parte_entera = int(montant)
+    parte_decimal = int(round((montant - parte_entera) * 100))
+    monto_palabras = num2words(parte_entera, lang='fr').upper()
+    monto_centimos = num2words(parte_decimal, lang='fr').upper() if parte_decimal > 0 else 'ZERO'
+
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    styles = getSampleStyleSheet()
-    elements = []
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Title'], textColor=colors.HexColor('#4e73df'))
-    elements.append(Paragraph(f'Envío Bancario nº {envio.id}', title_style))
-    elements.append(Spacer(1, 0.5*cm))
-    data = [
-        ['Campo', 'Valor'],
-        ['Nombre', envio.nom_envoie],
-        ['Banco', envio.banque_envoie],
-        ['Cuenta', envio.compte_envoie],
-        ['Fecha de envío', envio.date_envoie.strftime('%d/%m/%Y') if envio.date_envoie else ''],
-        ['Monto', f'{envio.montant_envoie} MAD'],
-        ['Motivo', envio.motif_envoie],
-        ['Beneficiario', str(envio.benificiario)],
-        ['Banco', str(envio.banco)],
-    ]
-    table = Table(data, colWidths=[5*cm, 10*cm])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4e73df')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('BACKGROUND', (0, 1), (0, -1), colors.HexColor('#f8f9fc')),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
-    ]))
-    elements.append(table)
-    doc.build(elements)
+    w, h = A4
+    c = canvasmod.Canvas(buffer, pagesize=A4)
+    c.setTitle('Envoie banque')
+    c.setAuthor('SIS')
+
+    verde = rl_colors.Color(2/255, 157/255, 116/255)
+    texto_verde = rl_colors.Color(240/255, 255/255, 240/255)
+    x = 15 * mm
+
+    c.setFont('Helvetica', 12)
+    c.drawString(x, h - 60 * mm, f'Rabat, le  : {fecha}')
+
+    c.setFont('Helvetica', 12)
+    c.drawString(x, h - 70 * mm, str(banco.nom_banque))
+    c.drawString(x, h - 78 * mm, str(banco.distrit_banque))
+    c.drawString(x, h - 86 * mm, str(banco.ville_banque))
+
+    c.setFont('Helvetica', 12)
+    c.drawString(x, h - 115 * mm, 'Messieurs,')
+
+    c.setFont('Helvetica', 11)
+    intro = (
+        f'Par le debit de notre compte n {banco.compte_banque}, '
+        f'nous vous prions de bien vouloir virer les montants aux comptes '
+        f'des beneficiaires dont la liste es indiquee ci-apres:'
+    )
+    c.drawString(x, h - 123 * mm, intro)
+
+    y_table = h - 145 * mm
+    w_nom = 50 * mm
+    w_banque = 40 * mm
+    w_compte = 60 * mm
+    w_montant = 30 * mm
+    row_h = 8 * mm
+
+    c.setFillColor(verde)
+    c.rect(x, y_table - row_h, w_nom, row_h, fill=1, stroke=1)
+    c.rect(x + w_nom, y_table - row_h, w_banque, row_h, fill=1, stroke=1)
+    c.rect(x + w_nom + w_banque, y_table - row_h, w_compte, row_h, fill=1, stroke=1)
+    c.rect(x + w_nom + w_banque + w_compte, y_table - row_h, w_montant, row_h, fill=1, stroke=1)
+
+    c.setFillColor(texto_verde)
+    c.setFont('Helvetica-Bold', 12)
+    c.drawString(x + 2 * mm, y_table - row_h + 2 * mm, 'Noms')
+    c.drawString(x + w_nom + 2 * mm, y_table - row_h + 2 * mm, 'Banque')
+    c.drawString(x + w_nom + w_banque + 2 * mm, y_table - row_h + 2 * mm, 'N Compte')
+    c.drawString(x + w_nom + w_banque + w_compte + 2 * mm, y_table - row_h + 2 * mm, 'Montant')
+
+    y_data = y_table - row_h * 2
+    c.setFillColor(rl_colors.black)
+    c.setFont('Helvetica', 11)
+    c.rect(x, y_data, w_nom, row_h, fill=0, stroke=1)
+    c.rect(x + w_nom, y_data, w_banque, row_h, fill=0, stroke=1)
+    c.rect(x + w_nom + w_banque, y_data, w_compte, row_h, fill=0, stroke=1)
+    c.rect(x + w_nom + w_banque + w_compte, y_data, w_montant, row_h, fill=0, stroke=1)
+
+    c.drawString(x + 2 * mm, y_data + 2 * mm, str(envio.nom_envoie))
+    c.drawString(x + w_nom + 2 * mm, y_data + 2 * mm, str(envio.banque_envoie))
+    c.drawCentredString(x + w_nom + w_banque + w_compte / 2, y_data + 2 * mm, str(envio.compte_envoie))
+    c.drawCentredString(x + w_nom + w_banque + w_compte + w_montant / 2, y_data + 2 * mm, f'{montant:.2f}')
+
+    y_total = y_data - row_h
+    c.setFont('Helvetica-Bold', 11)
+    c.rect(x, y_total, w_nom + w_banque + w_compte, row_h, fill=0, stroke=1)
+    c.rect(x + w_nom + w_banque + w_compte, y_total, w_montant, row_h, fill=0, stroke=1)
+    total_label_w = w_nom + w_banque + w_compte
+    c.drawRightString(x + total_label_w - 2 * mm, y_total + 2 * mm, 'Total General')
+    c.drawCentredString(x + w_nom + w_banque + w_compte + w_montant / 2, y_total + 2 * mm, f'{montant:.2f}')
+
+    y_after_table = y_total - 12 * mm
+    c.setFont('Helvetica-Bold', 12)
+    c.drawString(x, y_after_table, f'Motif Virement: {envio.motif_envoie}.')
+
+    y_montant_text = y_after_table - 10 * mm
+    texto_virement = (
+        f'ARRETE LE PRESENT ORDRE DE VIREMENT A LA SOMME DE '
+        f'{monto_palabras} DHS ET {monto_centimos} CTS.'
+    )
+    c.setFont('Helvetica-Bold', 12)
+    text_obj = c.beginText(x, y_montant_text)
+    text_obj.setLeading(14)
+    words = texto_virement.split(' ')
+    line = ''
+    for word in words:
+        test = line + ' ' + word if line else word
+        if c.stringWidth(test, 'Helvetica-Bold', 12) > (w - 2 * x):
+            text_obj.textLine(line)
+            line = word
+        else:
+            line = test
+    if line:
+        text_obj.textLine(line)
+    c.drawText(text_obj)
+
+    y_salut = y_montant_text - 20 * mm
+    c.setFont('Helvetica', 12)
+    c.drawString(x, y_salut, 'Veuillez agreer, Messieurs, nos salutations distinguees.')
+
+    c.save()
     buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf', headers={
         'Content-Disposition': f'attachment; filename="envio_{envio.id}.pdf"'

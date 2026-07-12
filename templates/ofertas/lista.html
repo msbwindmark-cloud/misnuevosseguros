@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Ofertas - Proyecto SIS{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-file-invoice-dollar"></i> Ofertas / Presupuestos</h4>
+        <a href="{% url 'oferta_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nueva Oferta</a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover datatable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente</th>
+                        <th>Vehículo</th>
+                        <th>Modalidad</th>
+                        <th>Duración</th>
+                        <th>Prima Est.</th>
+                        <th>Estado</th>
+                        <th>Creado</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in ofertas %}
+                    <tr>
+                        <td>{{ o.id }}</td>
+                        <td>
+                            <strong>{{ o.cliente_nombre }}</strong>
+                            {% if o.cliente_telefono %}<br><small class="text-muted">{{ o.cliente_telefono }}</small>{% endif %}
+                        </td>
+                        <td>{{ o.vehiculo_completo }}</td>
+                        <td>{{ o.modalidad|default:"—" }}</td>
+                        <td>{{ o.duracion|default:"—" }}</td>
+                        <td>{{ o.prima_estimada }} €</td>
+                        <td>
+                            {% if o.estado %}
+                                <span class="badge bg-{{ o.estado.color }}">{{ o.estado }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ o.creado_el|date:"d/m/Y" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'oferta_update' o.pk %}" class="btn btn-warning" title="Editar"><i class="fas fa-edit"></i></a>
+                                <a href="{% url 'oferta_delete' o.pk %}" class="btn btn-danger" title="Eliminar"><i class="fas fa-trash"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="text-center">No hay ofertas registradas</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

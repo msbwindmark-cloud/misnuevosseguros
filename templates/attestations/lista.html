@@ -6,6 +6,7 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0"><i class="fas fa-certificate me-2"></i>Atestaciones</h4>
     <div>
+      <button type="button" id="btnBulkDelete" class="btn btn-danger btn-sm" disabled><i class="fas fa-trash"></i> Eliminar (<span id="countSel">0</span>)</button>
       <a href="{% url 'import_attestations_excel' %}" class="btn btn-success btn-sm"><i class="fas fa-file-import me-1"></i>Importar Excel</a>
     </div>
   </div>
@@ -54,22 +55,53 @@
 </div>
 
 <form id="deleteForm" method="post" action="{% url 'attestation_delete' %}">{% csrf_token %}<input type="hidden" name="ids" id="deleteIds"></form>
+<form id="bulkDeleteForm" method="post" action="{% url 'attestation_delete' %}">{% csrf_token %}<input type="hidden" name="ids[]" id="bulkDeleteIds"></form>
 
 {% endblock %}
 {% block extra_js %}
 <script src="https://cdn.datatables.net/v/bs5/dt-1.11.5/datatables.min.js"></script>
 <script>
 $(document).ready(function() {
-    $('#attestationsTable').DataTable({
+    var tabla = $('#attestationsTable').DataTable({
         language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-fr.json' },
-        pageLength: 50,
+        pageLength: 5,
         order: [[4, 'desc']],
         columnDefs: [{ orderable: false, targets: [0,5] }],
-        drawCallback: function() { $('#selectAll').prop('checked', false); }
+        drawCallback: function() { $('#selectAll').prop('checked', false); actualizarContador(); }
     });
 
+    function actualizarContador() {
+        var n = tabla.$('input.row-checkbox:checked').length;
+        $('#countSel').text(n);
+        $('#btnBulkDelete').prop('disabled', n === 0);
+    }
+
     $('#selectAll').on('click', function() {
-        $('.row-checkbox').prop('checked', this.checked);
+        tabla.$('input.row-checkbox').prop('checked', this.checked);
+        actualizarContador();
+    });
+
+    $('#attestationsTable').on('change', 'input.row-checkbox', actualizarContador);
+
+    $('#btnBulkDelete').on('click', function() {
+        var seleccionados = [];
+        tabla.$('input.row-checkbox:checked').each(function() { seleccionados.push(this.value); });
+        if (seleccionados.length === 0) return;
+        Swal.fire({
+            title: '¿Eliminar ' + seleccionados.length + ' atestación(es)?',
+            text: 'Esta acción no se puede deshacer.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(function(result) {
+            if (result.isConfirmed) {
+                $('#bulkDeleteIds').val(seleccionados.join(','));
+                $('#bulkDeleteForm').submit();
+            }
+        });
     });
 
     $('.btn-eliminar').on('click', function() {
@@ -82,7 +114,7 @@ $(document).ready(function() {
             confirmButtonColor: '#dc3545',
             confirmButtonText: 'Sí, eliminar',
             cancelButtonText: 'Cancelar'
-        }).then(result => {
+        }).then(function(result) {
             if (result.isConfirmed) {
                 $('#deleteIds').val(id);
                 $('#deleteForm').submit();

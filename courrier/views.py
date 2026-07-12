@@ -96,34 +96,38 @@ class EnvioCourrierDeleteView(DeleteView):
 
 @staff_member_required
 def envio_courrier_pdf(request, pk):
+    from reportlab.pdfgen import canvas as canvasmod
+    from reportlab.lib.units import mm
     from .models import EnvioCourrier
+
     envio = EnvioCourrier.objects.get(pk=pk)
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    styles = getSampleStyleSheet()
-    elements = []
-    elements.append(Paragraph(f'Envio de Courrier n° {envio.id}', styles['Title']))
-    elements.append(Spacer(1, 0.5*cm))
-    data = [
-        ['Campo', 'Valor'],
-        ['Fecha', envio.date_envoie_courrier.strftime('%d/%m/%Y') if envio.date_envoie_courrier else ''],
-        ['Expediteur', envio.expediteur_envoie_courrier],
-        ['Destinataire', envio.destinataire_envoie_courrier],
-        ['Adresse', envio.addresse_envoie_courrier],
-    ]
-    table = Table(data, colWidths=[5*cm, 10*cm])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#4e73df')),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('BACKGROUND', (0,1), (0,-1), colors.HexColor('#f8f9fc')),
-        ('GRID', (0,0), (-1,-1), 1, colors.black),
-        ('FONTSIZE', (0,0), (-1,-1), 10),
-    ]))
-    elements.append(table)
-    doc.build(elements)
+    w, h = A4
+    c = canvasmod.Canvas(buffer, pagesize=A4)
+    c.setTitle('Envoie courrier')
+    c.setAuthor('SIS')
+
+    x = 15 * mm
+    y = h - 30 * mm
+    c.setFont('Helvetica', 12)
+
+    c.drawString(x, y, f'Recu No : {envio.id}')
+    y -= 10 * mm
+    c.drawString(x, y, f'Date Envoie courrier      :      {envio.date_envoie_courrier.strftime("%d/%m/%Y") if envio.date_envoie_courrier else ""}')
+    y -= 8 * mm
+    c.drawString(x, y, f'Expediteur envoie courrier      :      {envio.expediteur_envoie_courrier}')
+    y -= 14 * mm
+    c.drawString(x, y, f'Destinataire envoie courrier         :      {envio.destinataire_envoie_courrier}')
+    y -= 7 * mm
+    c.drawString(x, y, f'Addresse envoie courrier        :     {envio.addresse_envoie_courrier}')
+    y -= 7 * mm
+    fichero = envio.nombre_documento_envoie_courrier or ''
+    c.drawString(x, y, f'Fichiers envoie courrier        :     {fichero}')
+
+    c.save()
     buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf', headers={
-        'Content-Disposition': f'attachment; filename="courrier_{pk}.pdf"'
+        'Content-Disposition': f'attachment; filename="justificatif.pdf"'
     })
 
 @staff_member_required

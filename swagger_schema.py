@@ -604,4 +604,131 @@ manual_paths = {
             'responses': {'200': {'description': 'Lista de registros de auditoría'}},
         },
     },
+
+    # ── OFERTAS CRUD ──────────────────────────────────────────
+    '/ofertas/api/tipos-vehiculo/': {
+        'get': {
+            'summary': 'Lista de tipos de vehículo',
+            'operationId': 'tipo_vehiculo_list',
+            'tags': ['Ofertas API'],
+            'responses': {'200': {'description': 'Lista de tipos de vehículo'}},
+        },
+    },
+    '/ofertas/api/modalidades/': {
+        'get': {
+            'summary': 'Lista de modalidades de seguro',
+            'operationId': 'modalidad_list',
+            'tags': ['Ofertas API'],
+            'responses': {'200': {'description': 'Lista de modalidades'}},
+        },
+    },
+    '/ofertas/api/duraciones/': {
+        'get': {
+            'summary': 'Lista de duraciones disponibles',
+            'operationId': 'duracion_list',
+            'tags': ['Ofertas API'],
+            'responses': {'200': {'description': 'Lista de duraciones'}},
+        },
+    },
+    '/ofertas/api/estados/': {
+        'get': {
+            'summary': 'Lista de estados de oferta',
+            'operationId': 'estado_oferta_list',
+            'tags': ['Ofertas API'],
+            'responses': {'200': {'description': 'Lista de estados'}},
+        },
+    },
+    '/ofertas/': {
+        'get': {
+            'summary': 'Lista de ofertas / presupuestos',
+            'operationId': 'oferta_list',
+            'tags': ['Ofertas API'],
+            'responses': {'200': {'description': 'Lista de ofertas'}},
+        },
+    },
+    '/ofertas/nueva/': {
+        'get': {
+            'summary': 'Formulario nueva oferta',
+            'operationId': 'oferta_create_form',
+            'tags': ['Ofertas API'],
+            'responses': {'200': {'description': 'Formulario HTML'}},
+        },
+        'post': {
+            'summary': 'Crear oferta',
+            'operationId': 'oferta_create',
+            'tags': ['Ofertas API'],
+            'requestBody': {
+                'required': True,
+                'content': {'application/x-www-form-urlencoded': {
+                    'schema': {
+                        'type': 'object',
+                        'required': ['cliente_nombre'],
+                        'properties': {
+                            'cliente_nombre': {'type': 'string', 'description': 'Nombre del cliente'},
+                            'cliente_telefono': {'type': 'string'},
+                            'cliente_email': {'type': 'string'},
+                            'vehiculo_tipo': {'type': 'integer', 'description': 'ID tipo de vehículo (FK)'},
+                            'vehiculo_marca': {'type': 'string'},
+                            'vehiculo_modelo': {'type': 'string'},
+                            'vehiculo_matricula': {'type': 'string'},
+                            'vehiculo_potencia': {'type': 'string'},
+                            'vehiculo_anio': {'type': 'integer'},
+                            'modalidad': {'type': 'integer', 'description': 'ID modalidad de seguro (FK)'},
+                            'duracion': {'type': 'integer', 'description': 'ID duración (FK)'},
+                            'prima_estimada': {'type': 'number'},
+                            'estado': {'type': 'integer', 'description': 'ID estado (FK)'},
+                            'notas': {'type': 'string'},
+                        },
+                    },
+                }},
+            },
+            'responses': {'200': {'description': 'Oferta creada'}},
+        },
+    },
+    '/ofertas/{pk}/editar/': {
+        'get': {
+            'summary': 'Formulario editar oferta',
+            'operationId': 'oferta_update_form',
+            'tags': ['Ofertas API'],
+            'parameters': [
+                {'name': 'pk', 'in': 'path', 'schema': {'type': 'integer'}, 'description': 'ID oferta'},
+            ],
+            'responses': {'200': {'description': 'Formulario HTML con datos actuales'}},
+        },
+        'put': {
+            'summary': 'Actualizar oferta',
+            'operationId': 'oferta_update',
+            'tags': ['Ofertas API'],
+            'parameters': [
+                {'name': 'pk', 'in': 'path', 'schema': {'type': 'integer'}, 'description': 'ID oferta'},
+            ],
+            'requestBody': {
+                'required': True,
+                'content': {'application/x-www-form-urlencoded': {
+                    'schema': {'type': 'object'},
+                }},
+            },
+            'responses': {'200': {'description': 'Oferta actualizada'}},
+        },
+    },
+    '/ofertas/{pk}/eliminar/': {
+        'get': {
+            'summary': 'Confirmación eliminar oferta',
+            'operationId': 'oferta_delete_confirm',
+            'tags': ['Ofertas API'],
+            'parameters': [
+                {'name': 'pk', 'in': 'path', 'schema': {'type': 'integer'}, 'description': 'ID oferta'},
+            ],
+            'responses': {'200': {'description': 'Página de confirmación'}},
+        },
+        'delete': {
+            'summary': 'Eliminar oferta',
+            'operationId': 'oferta_delete',
+            'tags': ['Ofertas API'],
+            'parameters': [
+                {'name': 'pk', 'in': 'path', 'schema': {'type': 'integer'}, 'description': 'ID oferta'},
+            ],
+            'responses': {'200': {'description': 'Oferta eliminada'}},
+        },
+    },
 }

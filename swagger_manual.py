@@ -20,6 +20,7 @@ def swagger_api_schema(request):
             {'name': 'Siniestros API', 'description': 'Endpoints de gestión de siniestros'},
             {'name': 'Siniestros', 'description': 'Generación de PDF/Excel de siniestros'},
             {'name': 'Clientes API', 'description': 'Gestión y borrado de clientes'},
+            {'name': 'Ofertas API', 'description': 'Ofertas / presupuestos de seguros'},
             {'name': 'Documentos API', 'description': 'Gestión de documentos adjuntos'},
             {'name': 'Core API', 'description': 'Endpoints utilitarios (salat, expiring, etc.)'},
             {'name': 'Exportaciones', 'description': 'Generación de PDF y Excel'},

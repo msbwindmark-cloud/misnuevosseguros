@@ -28,6 +28,7 @@ class Expediteur(models.Model):
 class EnvioCourrier(models.Model):
     date_envoie_courrier = models.DateField(verbose_name='Fecha de envío')
     expediteur_envoie_courrier = models.CharField(max_length=255, verbose_name='Remitente')
+    addresse_expediteur_envoie_courrier = models.TextField(blank=True, null=True, verbose_name='Dirección remitente')
     destinataire_envoie_courrier = models.CharField(max_length=255, verbose_name='Destinatario')
     addresse_envoie_courrier = models.TextField(verbose_name='Dirección')
     tipo_documento_envoie_courrier = models.CharField(max_length=10, blank=True, null=True)

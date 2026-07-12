@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'core',
     'facturacion',
     'audit',
+    'ofertas',
 ]
 
 MIDDLEWARE = [
