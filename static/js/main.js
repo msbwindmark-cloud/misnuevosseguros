@@ -163,12 +163,33 @@ $(document).ready(function() {
 
     var adhanAudio = new Audio('/static/audio/adhan.mp3');
     var adhanSonando = false;
+    var adhanAudioUnlocked = false;
+
+    function desbloquearAudio() {
+        if (adhanAudioUnlocked) return;
+        adhanAudioUnlocked = true;
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var src = ctx.createBufferSource();
+        src.buffer = ctx.createBuffer(1, 1, 22050);
+        src.connect(ctx.destination);
+        src.start(0);
+        if (ctx.state === 'suspended') ctx.resume();
+    }
+    document.addEventListener('click', desbloquearAudio, { once: true });
+    document.addEventListener('touchstart', desbloquearAudio, { once: true });
 
     function reproducirAdhan() {
         if (adhanSonando) return;
         adhanSonando = true;
         adhanAudio.currentTime = 0;
-        adhanAudio.play().catch(function() {});
+        var p = adhanAudio.play();
+        if (p) {
+            p.catch(function() {
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('Adhan', { body: 'Haz clic en la página para escuchar el Adhan' });
+                }
+            });
+        }
         adhanAudio.onended = function() { adhanSonando = false; };
     }
     window.reproducirAdhan = reproducirAdhan;
