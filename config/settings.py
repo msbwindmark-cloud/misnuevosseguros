@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-^_*5#-o4&1fylh!h2$ski#-&b8pk5e=+qyq=*)*-hi4xzzp+v*'
 
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = ['misnuevosseguros.pythonanywhere.com', 'localhost', '127.0.0.1']
 
@@ -30,7 +30,6 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'livereload',
     'django.contrib.staticfiles',
     'usuarios',
     'clientes',
@@ -48,6 +47,9 @@ INSTALLED_APPS = [
     'ofertas',
 ]
 
+if DEBUG:
+    INSTALLED_APPS.insert(5, 'livereload')
+
 MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -59,8 +61,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.SecurityMiddleware',
     'audit.middleware.AuditMiddleware',
-    'livereload.middleware.LiveReloadScript',
 ]
+
+if DEBUG:
+    MIDDLEWARE.append('livereload.middleware.LiveReloadScript')
 
 ROOT_URLCONF = 'config.urls'
 
