@@ -24,15 +24,15 @@ from django.db import connection, transaction
 from django.utils import timezone
 
 # ── 2. Locate the SQL backup ────────────────────────────────────────────────
-DEFAULT_SQL = os.path.join(BASE_DIR, 'db-backup-2026-07-08_19-42-28.sql')
+DEFAULT_SQL = os.path.join(BASE_DIR, 'db-backup-2026-07-25_15-02-15.sql')
 DOWNLOAD_SQL = os.path.expanduser(
-    '~/Downloads/db-backup-2026-07-08_19-42-28.sql'
+    '~/Downloads/db-backup-2026-07-25_15-02-15.sql'
 )
 
 SQL_PATH = DEFAULT_SQL
 if not os.path.exists(SQL_PATH):
     alt = os.path.join(os.environ.get('USERPROFILE', ''), 'Downloads',
-                       'db-backup-2026-07-08_19-42-28.sql')
+                       'db-backup-2026-07-25_15-02-15.sql')
     if os.path.exists(alt):
         SQL_PATH = alt
     elif os.path.exists(DOWNLOAD_SQL):
@@ -248,6 +248,8 @@ def run():
         cursor.execute("PRAGMA foreign_keys = OFF;")
     print("FK checks disabled")
 
+    # ── Clear existing data for a full refresh ──
+    print("Clearing existing data...")
     from clientes.models import Cliente
     from polizas.models import Poliza, PolizaEliminada, PolizaGarantia, PolizaGarantiaOption, PolizaGarantiaFranchise
     from siniestros.models import Sinistro, DocumentoSinistro, Formule, ReferenceReglement, DocumentDeBase
@@ -257,6 +259,19 @@ def run():
     from documentos.models import TipoDocumento, DocumentoUsuario
     from expertos.models import Experto
     from attestations.models import TypeAttestation, Attestation
+
+    # Tables that get populated from the SQL dump (delete in FK-safe order)
+    tables_to_clear = [
+        PolizaGarantiaFranchise, PolizaGarantiaOption, PolizaGarantia,
+        DocumentoSinistro, Sinistro, EnvioBanco, EnvioCourrier,
+        PolizaEliminada, Poliza, Attestation, Benificiario,
+        DocumentoUsuario, Cliente, Banco, Destinataire, Expediteur,
+        Experto, TipoDocumento, Formule, DocumentDeBase,
+        ReferenceReglement, TypeAttestation,
+    ]
+    for model in tables_to_clear:
+        model.objects.all().delete()
+    print("Existing data cleared")
 
     # ── Seed garantias if empty ──
     if Garantia.objects.count() == 0:
