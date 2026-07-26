@@ -71,7 +71,7 @@ def export_polizas_pdf(request):
     })
 
 
-@staff_member_required
+@login_required
 def export_polizas_excel(request):
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment
@@ -114,8 +114,10 @@ def export_polizas_excel(request):
         ws.cell(row=row, column=16, value=float(p.reste))
     for col in range(1, len(headers)+1):
         ws.column_dimensions[chr(64+col)].width = 15
+    from datetime import datetime
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="polizas.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="polizas_{timestamp}.xlsx"'
     wb.save(response)
     return response
 
