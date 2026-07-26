@@ -374,6 +374,7 @@ def check_expiring_ajax(request):
     data = []
     for p in polizas:
         data.append({
+            'recu': p.recu,
             'assure': f'{p.assure} {p.prenom}',
             'police': p.police,
             'au': p.au.strftime('%d/%m/%Y') if p.au else '',

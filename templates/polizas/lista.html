@@ -32,9 +32,13 @@
                 <input type="date" class="form-control" name="fecha_hasta" value="{{ fecha_hasta }}">
             </div>
             <div class="col-auto">
-                <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filtrer</button>
+                <label class="form-label mb-0">Buscar</label>
+                <input type="text" class="form-control" name="q" value="{{ q }}" placeholder="Póliza, asegurado, matrícula...">
             </div>
-            {% if filtrando_fechas %}
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Buscar</button>
+            </div>
+            {% if filtrando_fechas or q %}
             <div class="col-auto">
                 <a href="{% url 'poliza_list' %}" class="btn btn-outline-secondary">Tous</a>
             </div>
@@ -239,7 +243,18 @@
         pageLength: 5,
         responsive: true,
         order: [[1, 'desc']],
-        columnDefs: [{ orderable: false, targets: 0 }]
+        columnDefs: [
+            { orderable: false, targets: [0, 9] },
+            {
+                targets: 1,
+                render: function(data, type) {
+                    if (type === 'sort' || type === 'type') {
+                        return parseInt(data.replace(/[^0-9]/g, '')) || 0;
+                    }
+                    return data;
+                }
+            }
+        ]
     });
 
     function actualizarSeleccion() {

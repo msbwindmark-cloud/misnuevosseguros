@@ -9,6 +9,7 @@ from django.views.generic import ListView, DetailView, View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Count
@@ -23,7 +24,7 @@ class PolizaListView(ListView):
     model = Poliza
     template_name = 'polizas/lista.html'
     context_object_name = 'polizas'
-    paginate_by = 50
+    paginate_by = None
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -31,6 +32,15 @@ class PolizaListView(ListView):
         if self.request.GET.get('con_docs') == '1':
             doc_ids = set(DocumentoUsuario.objects.values_list('id_usuario', flat=True).distinct())
             qs = qs.filter(recu__in=doc_ids)
+        q = self.request.GET.get('q')
+        if q:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(police__icontains=q) |
+                Q(assure__icontains=q) |
+                Q(matricule__icontains=q) |
+                Q(recu__icontains=q)
+            )
         fecha_desde = self.request.GET.get('fecha_desde')
         fecha_hasta = self.request.GET.get('fecha_hasta')
         if fecha_desde:
@@ -48,6 +58,7 @@ class PolizaListView(ListView):
         docs_count = DocumentoUsuario.objects.filter(id_usuario__in=recus).values('id_usuario').annotate(total=Count('id')).values_list('id_usuario', 'total')
         ctx['docs_count'] = {r: t for r, t in docs_count}
         ctx['filtrando_docs'] = self.request.GET.get('con_docs') == '1'
+        ctx['q'] = self.request.GET.get('q', '')
         ctx['fecha_desde'] = self.request.GET.get('fecha_desde', '')
         ctx['fecha_hasta'] = self.request.GET.get('fecha_hasta', '')
         ctx['filtando_fechas'] = bool(self.request.GET.get('fecha_desde') or self.request.GET.get('fecha_hasta'))
@@ -417,6 +428,55 @@ def get_polizas_json(request):
         'du': str(p.du or ''), 'au': str(p.au or ''),
     } for p in polizas.order_by('-pk')[:100]]
     return JsonResponse(data, safe=False)
+
+
+@login_required
+def poliza_datatables_data(request):
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 50))
+    search_value = request.GET.get('search[value]', '')
+    order_col = int(request.GET.get('order[0][column]', 1))
+    order_dir = request.GET.get('order[0][dir]', 'desc')
+
+    col_map = {1: 'recu', 2: 'fecha_hoy', 3: 'letype', 4: 'police',
+               5: 'matricule', 6: 'assure', 7: 'totale', 8: 'reste'}
+    order_field = col_map.get(order_col, 'recu')
+    if order_dir == 'desc':
+        order_field = '-' + order_field
+
+    qs = Poliza.objects.all()
+    if search_value:
+        from django.db.models import Q
+        qs = qs.filter(
+            Q(police__icontains=search_value) |
+            Q(assure__icontains=search_value) |
+            Q(matricule__icontains=search_value) |
+            Q(recu__icontains=search_value)
+        )
+
+    records_total = Poliza.objects.count()
+    records_filtered = qs.count()
+    polizas = qs.order_by(order_field)[start:start + length]
+
+    data = []
+    for p in polizas:
+        data.append({
+            'recu': p.recu,
+            'fecha_hoy': p.fecha_hoy.strftime('%d/%m/%Y') if p.fecha_hoy else '',
+            'letype': p.letype or '',
+            'police': p.police or '',
+            'matricule': p.matricule or '',
+            'assure': str(p.assure or ''),
+            'totale': str(p.totale or ''),
+            'reste': str(p.reste or ''),
+        })
+    return JsonResponse({
+        'draw': draw,
+        'recordsTotal': records_total,
+        'recordsFiltered': records_filtered,
+        'data': data,
+    })
 
 
 def poliza_docs_by_police(request):

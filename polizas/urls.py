@@ -17,4 +17,5 @@ urlpatterns = [
     path('api/attestation/creer/', views.crear_attestation_ajax, name='crear_attestation_ajax'),
     path('api/polizas/', views.get_polizas_json, name='get_polizas_json'),
     path('api/docs-by-police/', views.poliza_docs_by_police, name='poliza_docs_by_police'),
+    path('api/datatables/', views.poliza_datatables_data, name='poliza_datatables_data'),
 ]

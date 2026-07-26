@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
             badge.text(resp.count + ' vencimiento(s)').removeClass('bg-light text-dark').addClass('bg-warning text-dark');
             var html = '<ul class="list-unstyled mb-0">';
             $.each(resp.polizas, function(i, p) {
-                html += '<li class="small border-bottom py-2"><i class="fas fa-exclamation-circle text-warning me-1"></i> <strong>' + p.assure + '</strong> — Póliza: ' + p.police + ' — Vence: ' + p.au + ' — Tel: ' + p.telefono + '</li>';
+                html += '<li class="small border-bottom py-2"><a href="/polizas/' + p.recu + '/" class="text-decoration-none text-reset"><i class="fas fa-exclamation-circle text-warning me-1"></i> <strong>' + p.assure + '</strong> — Póliza: ' + p.police + ' — Vence: ' + p.au + ' — Tel: ' + p.telefono + '</a></li>';
             });
             html += '</ul>';
             list.html(html);
