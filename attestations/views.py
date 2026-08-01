@@ -39,23 +39,24 @@ def import_attestations_excel(request):
             messages.error(request, f'Error al leer el archivo: {e}')
             return redirect('attestation_list')
 
-        tipo_map = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6}
+        tipos_por_nombre = {t.type_attestation.strip().upper(): t for t in TypeAttestation.objects.all()}
         total = 0
-        errores = 0
+        duplicados = 0
+        importados_por_tipo = {}
 
         for idx, sheet_name in enumerate(wb.sheetnames):
-            if idx > 5:
-                break
             ws = wb[sheet_name]
-            id_tipo = tipo_map.get(idx)
-            if not id_tipo:
-                continue
-            tipo = TypeAttestation.objects.filter(id=id_tipo).first()
+            tipo = tipos_por_nombre.get(sheet_name.strip().upper())
+            if not tipo:
+                tipo = TypeAttestation.objects.filter(id=idx + 1).first()
             if not tipo:
                 continue
 
-            for row in ws.iter_rows(min_row=1, max_col=1, values_only=True):
-                valor = row[0]
+            contador_tipo = 0
+            for row in ws.iter_rows(values_only=True):
+                if len(row) < 2:
+                    continue
+                valor = row[1]
                 if valor is None or str(valor).strip() == '':
                     continue
                 numero = str(valor).strip()
@@ -66,12 +67,18 @@ def import_attestations_excel(request):
                         seleccionado=True,
                     )
                     total += 1
+                    contador_tipo += 1
                 else:
-                    errores += 1
+                    duplicados += 1
+            if contador_tipo:
+                importados_por_tipo[tipo.type_attestation] = contador_tipo
 
         msg = f'{total} attestations importadas.'
-        if errores:
-            msg += f' {errores} duplicados omitidos.'
+        if importados_por_tipo:
+            detalle = ', '.join(f'{k}: {v}' for k, v in importados_por_tipo.items())
+            msg += f' ({detalle}).'
+        if duplicados:
+            msg += f' {duplicados} duplicados omitidos.'
         messages.success(request, msg)
         return redirect('attestation_list')
 
