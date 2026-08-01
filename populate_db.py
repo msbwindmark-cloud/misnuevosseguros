@@ -24,15 +24,15 @@ from django.db import connection, transaction
 from django.utils import timezone
 
 # ── 2. Locate the SQL backup ────────────────────────────────────────────────
-DEFAULT_SQL = os.path.join(BASE_DIR, 'db-backup-2026-07-25_15-02-15.sql')
+DEFAULT_SQL = os.path.join(BASE_DIR, 'db-backup-2026-08-01_14-42-28.sql')
 DOWNLOAD_SQL = os.path.expanduser(
-    '~/Downloads/db-backup-2026-07-25_15-02-15.sql'
+    '~/Downloads/db-backup-2026-08-01_14-42-28.sql'
 )
 
 SQL_PATH = DEFAULT_SQL
 if not os.path.exists(SQL_PATH):
     alt = os.path.join(os.environ.get('USERPROFILE', ''), 'Downloads',
-                       'db-backup-2026-07-25_15-02-15.sql')
+                       'db-backup-2026-08-01_14-42-28.sql')
     if os.path.exists(alt):
         SQL_PATH = alt
     elif os.path.exists(DOWNLOAD_SQL):
