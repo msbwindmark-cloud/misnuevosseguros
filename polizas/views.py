@@ -507,6 +507,7 @@ def poliza_docs_by_police(request):
         'nombre': d.nombre_documento_usuario or '',
         'tipo': d.tipo_documento.tipo_documento if d.tipo_documento else 'Sin tipo',
         'url': d.archivo.url if d.archivo else '',
+        'descargar': reverse_lazy('descargar_documento', kwargs={'pk': d.id}),
     } for d in docs]
     return JsonResponse(data, safe=False)
 
@@ -673,6 +674,7 @@ def poliza_documents_data(request, pk):
             'tamanio': d.tamanio_documento_usuario,
             'fecha': d.creado_el.strftime('%d/%m/%Y %H:%M') if d.creado_el else '',
             'archivo': d.archivo.url if d.archivo else '',
+            'descargar': reverse_lazy('descargar_documento', kwargs={'pk': d.id}),
             'origen': d.id_documento_usuario_origen,
             'heredado': bool(d.id_documento_usuario_origen),
         })

@@ -14,4 +14,5 @@ urlpatterns = [
     path('api/poliza/<int:pk>/documentos/', views.get_poliza_documentos, name='get_poliza_documentos'),
     path('api/<int:pk>/documentos/', views.sinistro_documentos_data, name='sinistro_documentos_data'),
     path('<int:pk>/docs/agregar/', views.sinistro_documentos_agregar, name='sinistro_documentos_agregar'),
+    path('docs/descargar/<int:pk>/', views.descargar_documento_siniestro, name='descargar_documento_siniestro'),
 ]

@@ -145,6 +145,15 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Carpetas legacy de subida de documentos (proyecto PHP original).
+# Se buscan aquí los ficheros cuando el campo `archivo` está vacío.
+DOCUMENTOS_LEGACY_ROOTS = [
+    Path(r'C:\wamp64\www\proyectoSis\uploads'),
+    Path(r'C:\wamp64\www\proyectoSis\uploads_sinistres'),
+    Path(r'C:\wamp64\www\proyectoSis_infinityfree\uploads'),
+    Path(r'C:\wamp64\www\proyectoSis_infinityfree\uploads_sinistres'),
+]
+
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'

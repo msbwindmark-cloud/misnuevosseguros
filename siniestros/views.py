@@ -1,8 +1,9 @@
 import json, os
 from datetime import datetime
+from django.conf import settings
 from django.db.models import Count
 from django.urls import reverse_lazy
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, FileResponse, HttpResponseNotFound
 from django.views.generic import ListView, View
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
@@ -167,6 +168,7 @@ def get_poliza_documentos(request, pk):
         'id': d.id,
         'nombre': d.nombre_documento_usuario,
         'tipo': str(d.tipo_documento) if d.tipo_documento else '',
+        'descargar': reverse_lazy('descargar_documento', kwargs={'pk': d.id}),
     } for d in docs]
     return JsonResponse(data, safe=False)
 
@@ -179,6 +181,7 @@ def sinistro_documentos_data(request, pk):
         'nombre': d.nombre_archivo or '',
         'tipo': str(d.tipo_documento) if d.tipo_documento else '—',
         'archivo': d.archivo.url if d.archivo else '',
+        'descargar': reverse_lazy('descargar_documento_siniestro', kwargs={'pk': d.id}),
         'origen': d.id_documento_usuario_origen,
         'heredado': bool(d.id_documento_usuario_origen),
     } for d in docs]
@@ -235,6 +238,44 @@ def sinistro_documentos_agregar(request, pk):
         messages.success(request, f'{count} documento(s) añadido(s) al siniestro {sinistro.code_sinistre}')
         return redirect('sinistro_update', pk=sinistro.id)
     return redirect('sinistro_list')
+
+
+def _resolver_documento_siniestro_legacy(nombre):
+    if not nombre:
+        return None
+    for root in getattr(settings, 'DOCUMENTOS_LEGACY_ROOTS', []):
+        candidato = os.path.join(str(root), nombre)
+        if os.path.isfile(candidato):
+            return candidato
+    return None
+
+
+@staff_member_required
+def descargar_documento_siniestro(request, pk):
+    doc = get_object_or_404(DocumentoSinistro, pk=pk)
+
+    if doc.archivo:
+        ruta = doc.archivo.path
+        if os.path.isfile(ruta):
+            response = FileResponse(open(ruta, 'rb'), as_attachment=True,
+                                    filename=os.path.basename(ruta))
+            return response
+
+    if doc.ruta_archivo:
+        ruta = os.path.join(str(settings.MEDIA_ROOT), doc.ruta_archivo)
+        if os.path.isfile(ruta):
+            response = FileResponse(open(ruta, 'rb'), as_attachment=True,
+                                    filename=os.path.basename(ruta))
+            return response
+
+    ruta = _resolver_documento_siniestro_legacy(doc.nombre_archivo)
+    if ruta:
+        response = FileResponse(open(ruta, 'rb'), as_attachment=True,
+                                filename=os.path.basename(ruta))
+        return response
+
+    return HttpResponseNotFound('Fichero no disponible.')
+
 
 
 class SinistroUpdateView(View):

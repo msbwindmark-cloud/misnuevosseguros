@@ -17,8 +17,9 @@
 {% csrf_token %}
 <input type="hidden" name="garantias_data" id="garantias_data" value="[]">
 <div class="card">
-    <div class="card-header bg-dark text-white">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h4 class="mb-0"><i class="fas fa-file-invoice"></i> Nueva Póliza</h4>
+        <a href="{% url 'poliza_list' %}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Volver</a>
     </div>
     <div class="card-body">
         <div class="row">
@@ -616,7 +617,8 @@ function cargarDocsPoliza() {
             data.forEach(doc => {
                 const nombre = (doc.nombre || '').replace(/</g, '&lt;');
                 const tipo = (doc.tipo || '').replace(/</g, '&lt;');
-                const link = doc.url ? '<a href="' + doc.url + '" target="_blank" class="ms-1" title="Voir"><i class="fas fa-external-link-alt"></i></a>' : '';
+                const link = (doc.url ? '<a href="' + doc.url + '" target="_blank" class="ms-1" title="Voir"><i class="fas fa-eye"></i></a>' : '') +
+                    '<a href="' + doc.descargar + '" class="ms-1" title="Descargar"><i class="fas fa-download"></i></a>';
                 html += '<div class="col-md-6 mb-2"><div class="card card-body p-2 shadow-sm">' +
                     '<div class="form-check">' +
                     '<input class="form-check-input" type="checkbox" name="docs_reutilizados" value="' + doc.id + '" id="docidx_' + doc.id + '">' +

@@ -9,4 +9,5 @@ urlpatterns = [
     path('add-docs/', views.add_document_to_poliza, name='add_document_to_poliza'),
     path('add-docs/<int:recu>/', views.add_document_to_poliza, name='add_document_to_poliza'),
     path('por-cliente/', views.consulter_documents_des_clients, name='consulter_documents_des_clients'),
+    path('descargar/<int:pk>/', views.descargar_documento, name='descargar_documento'),
 ]

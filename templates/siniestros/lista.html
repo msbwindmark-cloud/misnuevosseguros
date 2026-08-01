@@ -229,8 +229,9 @@ document.querySelectorAll('.btn-consultar-docs-sin').forEach(function(btn) {
                 var html = '';
                 data.documentos.forEach(function(d) {
                     var origen = d.heredado ? '<span class="badge bg-warning text-dark">Heredado</span>' : '<span class="badge bg-success">Nuevo</span>';
-                    var enlace = d.archivo ? '<a href="' + d.archivo + '" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></a>' : '';
-                    html += '<tr><td>' + d.tipo + '</td><td>' + d.nombre + '</td><td>' + origen + '</td><td>' + enlace + '</td></tr>';
+                    var enlace = (d.archivo ? '<a href="' + d.archivo + '" target="_blank" class="btn btn-sm btn-outline-primary" title="Ver"><i class="fas fa-eye"></i></a> ' : '') +
+                        '<a href="' + d.descargar + '" class="btn btn-sm btn-outline-success" title="Descargar"><i class="fas fa-download"></i></a>';
+                    html += '<tr><td>' + d.tipo + '</td><td>' + d.nombre + '</td><td>' + origen + '</td><td class="text-nowrap">' + enlace + '</td></tr>';
                 });
                 tbody.innerHTML = html;
             })
@@ -262,7 +263,8 @@ document.querySelectorAll('.btn-ajouter-docs-sin').forEach(function(btn) {
                 data.documentos.forEach(function(d) {
                     var tipo = (d.tipo || '').replace(/</g, '&lt;');
                     var nombre = (d.nombre || '').replace(/</g, '&lt;');
-                    var link = d.archivo ? '<a href="' + d.archivo + '" target="_blank" class="ms-1"><i class="fas fa-external-link-alt"></i></a>' : '';
+                    var link = (d.archivo ? '<a href="' + d.archivo + '" target="_blank" class="ms-1" title="Ver"><i class="fas fa-eye"></i></a>' : '') +
+                        '<a href="' + d.descargar + '" class="ms-1" title="Descargar"><i class="fas fa-download"></i></a>';
                     html += '<div class="col-md-6 mb-2"><div class="card card-body p-2 shadow-sm"><div class="form-check">' +
                         '<input class="form-check-input" type="checkbox" name="docs_reutilizados" value="' + d.id + '" id="docsin_' + d.id + '">' +
                         '<label class="form-check-label text-truncate" for="docsin_' + d.id + '" style="max-width:90%">' +

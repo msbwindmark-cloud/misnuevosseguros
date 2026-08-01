@@ -1,7 +1,9 @@
+import os
+from django.conf import settings
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, HttpResponseNotFound
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import TipoDocumento, DocumentoUsuario
@@ -99,3 +101,34 @@ def consulter_documents_des_clients(request):
     return render(request, 'documentos/consulter_documents.html', {
         'documentos_por_poliza': documentos_por_poliza,
     })
+
+
+def _resolver_documento_legacy(nombre):
+    """Busca el fichero por nombre en las carpetas legacy configuradas."""
+    if not nombre:
+        return None
+    for root in getattr(settings, 'DOCUMENTOS_LEGACY_ROOTS', []):
+        candidato = os.path.join(str(root), nombre)
+        if os.path.isfile(candidato):
+            return candidato
+    return None
+
+
+@staff_member_required
+def descargar_documento(request, pk):
+    doc = get_object_or_404(DocumentoUsuario, pk=pk)
+
+    if doc.archivo:
+        ruta = doc.archivo.path
+        if os.path.isfile(ruta):
+            response = FileResponse(open(ruta, 'rb'), as_attachment=True,
+                                    filename=os.path.basename(ruta))
+            return response
+
+    ruta = _resolver_documento_legacy(doc.nombre_documento_usuario)
+    if ruta:
+        response = FileResponse(open(ruta, 'rb'), as_attachment=True,
+                                filename=os.path.basename(ruta))
+        return response
+
+    return HttpResponseNotFound('Fichero no disponible.')

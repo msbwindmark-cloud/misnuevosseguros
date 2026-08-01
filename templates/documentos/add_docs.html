@@ -4,8 +4,15 @@
 {% block content %}
 <div class="container py-4">
   <div class="card shadow-sm">
-    <div class="card-header bg-dark text-white">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
       <h5 class="mb-0"><i class="fas fa-file-upload me-2"></i>Añadir Documentos a una Póliza</h5>
+      <div class="d-flex gap-2">
+        {% if poliza %}
+        <a href="{% url 'poliza_detail' poliza.recu %}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Volver</a>
+        {% else %}
+        <a href="{% url 'poliza_list' %}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Volver</a>
+        {% endif %}
+      </div>
     </div>
     <div class="card-body">
       <form id="formDocs" method="post" enctype="multipart/form-data">
@@ -63,7 +70,7 @@
       <h6>Documentos de la póliza nº {{ poliza.recu }} — {{ poliza.assure }} {{ poliza.prenom }}</h6>
       <div class="table-responsive">
         <table class="table table-sm table-striped datatable" id="tablaDocumentos">
-          <thead><tr><th>#</th><th>Archivo</th><th>Tipo</th><th>Tamaño</th><th>Subido</th></tr></thead>
+          <thead><tr><th>#</th><th>Archivo</th><th>Tipo</th><th>Tamaño</th><th>Subido</th><th>Acciones</th></tr></thead>
           <tbody>
             {% for d in documentos %}
             <tr>
@@ -72,9 +79,15 @@
               <td>{{ d.tipo_documento }}</td>
               <td>{% if d.tamanio_documento_usuario %}{{ d.tamanio_documento_usuario|filesizeformat }}{% endif %}</td>
               <td>{{ d.creado_el|date:"d/m/Y H:i" }}</td>
+              <td class="text-nowrap">
+                {% if d.archivo %}
+                <a href="{{ d.archivo.url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="Ver"><i class="fas fa-eye"></i></a>
+                {% endif %}
+                <a href="{% url 'descargar_documento' d.id %}" class="btn btn-sm btn-outline-success" title="Descargar"><i class="fas fa-download"></i></a>
+              </td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="text-center">Sin documentos</td></tr>
+            <tr><td colspan="6" class="text-center">Sin documentos</td></tr>
             {% endfor %}
           </tbody>
         </table>

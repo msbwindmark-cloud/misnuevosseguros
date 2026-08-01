@@ -2,8 +2,9 @@
 {% block title %}Documentos por Cliente - Proyecto SIS{% endblock %}
 {% block content %}
 <div class="card">
-    <div class="card-header bg-dark text-white">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h4 class="mb-0"><i class="fas fa-folder-open"></i> Documentos de los Clientes</h4>
+        <a href="{% url 'poliza_list' %}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Volver</a>
     </div>
     <div class="card-body">
         {% if documentos_por_poliza %}
@@ -38,13 +39,12 @@
                                 <td>{% if d.tamanio_documento_usuario %}{{ d.tamanio_documento_usuario|filesizeformat }}{% else %}—{% endif %}</td>
                                 <td>{{ d.creado_el|date:"d/m/Y H:i" }}</td>
                                 <td>
-                                    {% if d.archivo %}
-                                    <a href="{{ d.archivo.url }}" class="btn btn-sm btn-success" target="_blank">
-                                        <i class="fas fa-download"></i> Descargar
-                                    </a>
-                                    {% else %}
-                                    <span class="text-muted">Sin archivo</span>
-                                    {% endif %}
+                                    <div class="d-flex gap-1">
+                                        {% if d.archivo %}
+                                        <a href="{{ d.archivo.url }}" class="btn btn-sm btn-outline-primary" target="_blank" title="Ver"><i class="fas fa-eye"></i></a>
+                                        {% endif %}
+                                        <a href="{% url 'descargar_documento' d.id %}" class="btn btn-sm btn-success" title="Descargar"><i class="fas fa-download"></i> Descargar</a>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
