@@ -1,8 +1,12 @@
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.contrib.admin.views.decorators import staff_member_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
+from django.views import View
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -80,11 +84,61 @@ class BenificiarioDeleteView(DeleteView):
 
 
 @method_decorator(staff_member_required, name='dispatch')
-class EnvioBancoCreateView(CreateView):
-    model = EnvioBanco
-    form_class = EnvioBancoForm
+class EnvioBancoCreateView(View):
     template_name = 'banco/envio_form.html'
     success_url = reverse_lazy('envio_banco_list')
+
+    def get(self, request):
+        form = EnvioBancoForm()
+        bancos = Banco.objects.all()
+        beneficiarios = Benificiario.objects.all()
+        return render(request, self.template_name, {
+            'form': form, 'bancos': bancos, 'beneficiarios': beneficiarios
+        })
+
+    def post(self, request):
+        data = request.POST
+        files = request.FILES
+        benificiario_id = data.get('benificiario')
+        banco_id = data.get('banco')
+        try:
+            ben = Benificiario.objects.get(pk=int(benificiario_id)) if benificiario_id else None
+        except (Benificiario.DoesNotExist, ValueError, TypeError):
+            ben = None
+        try:
+            ban = Banco.objects.get(pk=int(banco_id)) if banco_id else None
+        except (Banco.DoesNotExist, ValueError, TypeError):
+            ban = None
+
+        envio = EnvioBanco.objects.create(
+            nom_envoie=ben.nom_benificiaire if ben else '',
+            banque_envoie=ben.banque_benificiaire if ben else '',
+            compte_envoie=ben.compte_benificiaire if ben else '',
+            date_envoie=data.get('date_envoie') or None,
+            montant_envoie=data.get('montant_envoie', 0),
+            motif_envoie=data.get('motif_envoie', ''),
+            benificiario=ben,
+            banco=ban,
+        )
+
+        file = files.get('fileupload')
+        if file:
+            ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
+            import os
+            from django.conf import settings
+            upload_dir = settings.MEDIA_ROOT / 'uploads_banco'
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            filepath = upload_dir / file.name
+            with open(str(filepath), 'wb+') as dest:
+                for chunk in file.chunks():
+                    dest.write(chunk)
+            envio.tipo_documento_envoie_banque = ext
+            envio.nombre_documento_envoie_banque = file.name
+            envio.tamanio_documento_envoie_banque = file.size
+            envio.save()
+
+        messages.success(request, f'Virement enregistré correctement')
+        return redirect(self.success_url)
 
 
 @method_decorator(staff_member_required, name='dispatch')
@@ -298,3 +352,85 @@ def export_envios_banco_excel(request):
     response['Content-Disposition'] = 'attachment; filename="envios_bancarios.xlsx"'
     wb.save(response)
     return response
+
+
+@staff_member_required
+def get_beneficiario_json(request):
+    pk = request.GET.get('pk', '')
+    if not pk or not pk.isdigit():
+        return JsonResponse({'ok': False})
+    try:
+        b = Benificiario.objects.get(pk=int(pk))
+        return JsonResponse({'ok': True, 'nom': b.nom_benificiaire, 'banque': b.banque_benificiaire, 'compte': b.compte_benificiaire})
+    except Benificiario.DoesNotExist:
+        return JsonResponse({'ok': False})
+
+
+# --- AJAX Banco (otro_banque.php) ---
+
+@csrf_exempt
+@staff_member_required
+def banco_ajax(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'})
+    action = request.POST.get('action', '')
+    if action == 'insert':
+        Banco.objects.create(
+            nom_banque=request.POST.get('nom_banque', ''),
+            compte_banque=request.POST.get('compte_banque', ''),
+            address_banque=request.POST.get('address_banque', ''),
+            distrit_banque=request.POST.get('distrit_banque', ''),
+            ville_banque=request.POST.get('ville_banque', ''),
+        )
+        return JsonResponse({'ok': True})
+    if request.POST.get('edit_id'):
+        b = get_object_or_404(Banco, pk=request.POST.get('edit_id'))
+        return JsonResponse({'id': b.pk, 'nom_banque': b.nom_banque, 'compte_banque': b.compte_banque,
+                             'address_banque': b.address_banque, 'distrit_banque': b.distrit_banque,
+                             'ville_banque': b.ville_banque})
+    if action == 'update':
+        b = get_object_or_404(Banco, pk=request.POST.get('id_banque'))
+        b.nom_banque = request.POST.get('nom_banque', b.nom_banque)
+        b.compte_banque = request.POST.get('compte_banque', b.compte_banque)
+        b.address_banque = request.POST.get('address_banque', b.address_banque)
+        b.distrit_banque = request.POST.get('distrit_banque', b.distrit_banque)
+        b.ville_banque = request.POST.get('ville_banque', b.ville_banque)
+        b.save()
+        return JsonResponse({'ok': True})
+    if request.POST.get('del_id'):
+        get_object_or_404(Banco, pk=request.POST.get('del_id')).delete()
+        return JsonResponse({'ok': True})
+    return JsonResponse({'ok': False, 'error': 'Acción no reconocida'})
+
+
+# --- AJAX Benificiario (otro_benificiaire.php) ---
+
+@csrf_exempt
+@staff_member_required
+def benificiario_ajax(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'})
+    action = request.POST.get('action', '')
+    if action == 'insert':
+        Benificiario.objects.create(
+            nom_benificiaire=request.POST.get('nom_benificiaire', ''),
+            banque_benificiaire=request.POST.get('banque_benificiaire', ''),
+            compte_benificiaire=request.POST.get('compte_benificiaire', ''),
+        )
+        return JsonResponse({'ok': True})
+    if request.POST.get('edit_id'):
+        b = get_object_or_404(Benificiario, pk=request.POST.get('edit_id'))
+        return JsonResponse({'id': b.pk, 'nom_benificiaire': b.nom_benificiaire,
+                             'banque_benificiaire': b.banque_benificiaire,
+                             'compte_benificiaire': b.compte_benificiaire})
+    if action == 'update':
+        b = get_object_or_404(Benificiario, pk=request.POST.get('id_benificiaire'))
+        b.nom_benificiaire = request.POST.get('nom_benificiaire', b.nom_benificiaire)
+        b.banque_benificiaire = request.POST.get('banque_benificiaire', b.banque_benificiaire)
+        b.compte_benificiaire = request.POST.get('compte_benificiaire', b.compte_benificiaire)
+        b.save()
+        return JsonResponse({'ok': True})
+    if request.POST.get('del_id'):
+        get_object_or_404(Benificiario, pk=request.POST.get('del_id')).delete()
+        return JsonResponse({'ok': True})
+    return JsonResponse({'ok': False, 'error': 'Acción no reconocida'})

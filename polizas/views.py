@@ -387,6 +387,20 @@ def get_attestations_json(request):
     return JsonResponse(data, safe=False)
 
 
+def get_next_attestation(request):
+    from attestations.models import Attestation
+    type_id = request.GET.get('type_id', '')
+    if not type_id or not type_id.isdigit():
+        return JsonResponse({'ok': False, 'error': 'type_id requerido'})
+    att = Attestation.objects.filter(
+        id_type_attestation_id=int(type_id),
+        seleccionado=True
+    ).order_by('-id').first()
+    if att:
+        return JsonResponse({'ok': True, 'numero': str(att.numero_attestation), 'id': att.pk})
+    return JsonResponse({'ok': False, 'error': 'No hay attestations disponibles para este tipo'})
+
+
 @csrf_exempt
 def crear_attestation_ajax(request):
     if request.method == 'POST':

@@ -2,6 +2,7 @@
 {% block title %}Beneficiarios - Proyecto SIS{% endblock %}
 {% block content %}
 <div class="mb-3 d-flex gap-2 flex-wrap">
+    <a href="{% url 'envio_banco_create' %}" class="btn btn-sm btn-success"><i class="fas fa-exchange-alt"></i> Generar Virement</a>
     <a href="{% url 'envio_banco_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-exchange-alt"></i> Envíos</a>
     <a href="{% url 'banco_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-university"></i> Bancos</a>
     <a href="{% url 'benificiario_list' %}" class="btn btn-sm btn-primary"><i class="fas fa-hand-holding-usd"></i> Beneficiarios</a>
@@ -9,13 +10,15 @@
 <div class="card">
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h4 class="mb-0"><i class="fas fa-hand-holding-usd"></i> Lista de Beneficiarios</h4>
-        <a href="{% url 'benificiario_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nuevo Beneficiario</a>
+        <div>
+            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addModal"><i class="fas fa-plus"></i> Créer un beneficiaire</button>
+        </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover datatable">
+            <table id="tablaBeneficiarios" class="table table-hover table-striped table-sm w-100">
                 <thead>
-                    <tr><th>ID</th><th>Nombre</th><th>Banco</th><th>Cuenta</th><th>Acciones</th></tr>
+                    <tr><th>ID</th><th>Nom Beneficiaire</th><th>Banque Beneficiaire</th><th>Compte Beneficiaire</th><th>Action</th></tr>
                 </thead>
                 <tbody>
                     {% for b in beneficiarios %}
@@ -25,8 +28,8 @@
                         <td>{{ b.banque_benificiaire }}</td>
                         <td>{{ b.compte_benificiaire }}</td>
                         <td>
-                            <a href="{% url 'benificiario_update' b.pk %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Editar</a>
-                            <a href="{% url 'benificiario_delete' b.pk %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Eliminar</a>
+                            <button type="button" class="btn btn-outline-info btn-sm editBtn" data-id="{{ b.id }}"><i class="fas fa-edit"></i></button>
+                            <button type="button" class="btn btn-outline-danger btn-sm delBtn" data-id="{{ b.id }}"><i class="fas fa-trash-alt"></i></button>
                         </td>
                     </tr>
                     {% empty %}
@@ -37,4 +40,170 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Crear Beneficiario -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="addModalLabel">Créer un beneficiaire</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="form-data">
+                <div class="modal-body">
+                    <div class="form-group mb-3 mt-3">
+                        <input type="text" name="nom_benificiaire" id="nom_benificiaire" placeholder="Nom Beneficiaire" class="form-control" required>
+                    </div>
+                    <div class="form-group mb-3 mt-3">
+                        <input type="text" name="banque_benificiaire" id="banque_benificiaire" placeholder="Banque Beneficiaire" class="form-control" required>
+                    </div>
+                    <div class="form-group mb-3 mt-3">
+                        <input type="text" name="compte_benificiaire" id="compte_benificiaire" placeholder="Compte Beneficiaire" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sortir</button>
+                    <button type="submit" name="insert" id="insert" class="btn btn-success fas fa-plus ps-2 pe-2">&nbsp;Ajouter un beneficiaire&nbsp;</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Beneficiario -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="editModalLabel">Modifier un beneficiaire</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="edit-form-data">
+                <input type="hidden" name="id_benificiaire" id="id_benificiaire">
+                <div class="modal-body">
+                    <div class="form-group mb-3 mt-3">
+                        <input type="text" name="nom_benificiaire" id="edit_nom_benificiaire" class="form-control" required>
+                    </div>
+                    <div class="form-group mb-3 mt-3">
+                        <input type="text" name="banque_benificiaire" id="edit_banque_benificiaire" class="form-control" required>
+                    </div>
+                    <div class="form-group mb-3 mt-3">
+                        <input type="text" name="compte_benificiaire" id="edit_compte_benificiaire" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sortir</button>
+                    <button type="submit" name="update" id="update" class="btn btn-warning fas fa-edit ps-2 pe-2">&nbsp;Modifier un beneficiaire&nbsp;</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    var tablaBeneficiarios = $('#tablaBeneficiarios').DataTable({
+        language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
+        pageLength: 5,
+        lengthMenu: [5, 10, 25, 50],
+        order: [[0, 'desc']],
+        columnDefs: [{ orderable: false, targets: [4] }]
+    });
+
+    function recargar() {
+        tablaBeneficiarios.ajax.reload();
+    }
+
+    $('#form-data').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '{% url "benificiario_ajax" %}',
+            type: 'POST',
+            data: $('#form-data').serialize() + '&action=insert',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(res) {
+                if (res.ok) {
+                    Swal.fire('Creado', 'Beneficiaire ajouté correctement', 'success');
+                    $('#addModal').modal('hide');
+                    $('#form-data')[0].reset();
+                    window.location.reload();
+                } else {
+                    Swal.fire('Error', res.error || 'Error al crear', 'error');
+                }
+            }
+        });
+    });
+
+    $('body').on('click', '.editBtn', function(e) {
+        e.preventDefault();
+        var id = $(this).data('id');
+        $.ajax({
+            url: '{% url "benificiario_ajax" %}',
+            type: 'POST',
+            data: { edit_id: id },
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(data) {
+                $('#id_benificiaire').val(data.id);
+                $('#edit_nom_benificiaire').val(data.nom_benificiaire);
+                $('#edit_banque_benificiaire').val(data.banque_benificiaire);
+                $('#edit_compte_benificiaire').val(data.compte_benificiaire);
+                $('#editModal').modal('show');
+            }
+        });
+    });
+
+    $('#edit-form-data').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '{% url "benificiario_ajax" %}',
+            type: 'POST',
+            data: $('#edit-form-data').serialize() + '&action=update',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(res) {
+                if (res.ok) {
+                    Swal.fire('Modificado', 'Beneficiaire modificado correctamente', 'success');
+                    $('#editModal').modal('hide');
+                    $('#edit-form-data')[0].reset();
+                    window.location.reload();
+                } else {
+                    Swal.fire('Error', res.error || 'Error al modificar', 'error');
+                }
+            }
+        });
+    });
+
+    $('body').on('click', '.delBtn', function(e) {
+        e.preventDefault();
+        var id = $(this).data('id');
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '{% url "benificiario_ajax" %}',
+                    type: 'POST',
+                    data: { del_id: id },
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                    success: function(res) {
+                        if (res.ok) {
+                            Swal.fire('Eliminado', 'Beneficiaire eliminado correctamente', 'success');
+                            window.location.reload();
+                        } else {
+                            Swal.fire('Error', res.error || 'Error al eliminar', 'error');
+                        }
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

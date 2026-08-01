@@ -17,4 +17,7 @@ urlpatterns = [
     path('envios/<int:pk>/pdf/', views.envio_banco_pdf, name='envio_banco_pdf'),
     path('envios/pdf/', views.envio_banco_list_pdf, name='envio_banco_list_pdf'),
     path('envios/excel/', views.export_envios_banco_excel, name='export_envios_banco_excel'),
+    path('api/beneficiario/', views.get_beneficiario_json, name='get_beneficiario_json'),
+    path('api/banco/', views.banco_ajax, name='banco_ajax'),
+    path('api/benificiario/', views.benificiario_ajax, name='benificiario_ajax'),
 ]

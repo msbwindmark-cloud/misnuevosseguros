@@ -1,74 +1,87 @@
 {% extends 'base.html' %}
-{% block title %}{% if object %}Editar Envío{% else %}Nuevo Envío{% endif %} - Proyecto SIS{% endblock %}
+{% block title %}Generar Virement - Proyecto SIS{% endblock %}
 {% block content %}
 <div class="mb-3 d-flex gap-2 flex-wrap">
-    <a href="{% url 'envio_banco_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-exchange-alt"></i> Envíos</a>
-    <a href="{% url 'banco_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-university"></i> Bancos</a>
-    <a href="{% url 'benificiario_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-hand-holding-usd"></i> Beneficiarios</a>
+    <a href="{% url 'envio_banco_list' %}" class="btn btn-sm btn-primary"><i class="fas fa-exchange-alt"></i> Envíos</a>
+    <a href="{% url 'banco_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-university"></i> Enregistrer une banque</a>
+    <a href="{% url 'benificiario_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-hand-holding-usd"></i> Enregistrer un beneficiaire</a>
+    {% if user.is_superuser %}
+    <a href="{% url 'admin:index' %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-cog"></i> Panel Admin</a>
+    {% endif %}
 </div>
+
 <div class="card">
-    <div class="card-header bg-dark text-white">
-        <h4 class="mb-0"><i class="fas fa-exchange-alt"></i> {% if object %}Editar Envío{% else %}Nuevo Envío{% endif %}</h4>
+    <div class="card-header bg-success text-white">
+        <h4 class="mb-0"><i class="fas fa-exchange-alt"></i> Generar Virement</h4>
     </div>
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="card-body">
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="{{ form.nom_envoie.id_for_label }}" class="form-label">{{ form.nom_envoie.label }}</label>
-                    {{ form.nom_envoie }}
-                    {% if form.nom_envoie.errors %}<div class="text-danger small">{{ form.nom_envoie.errors }}</div>{% endif %}
+                    <label for="{{ form.banco.id_for_label }}" class="form-label">Compte a debit <span class="text-danger">*</span></label>
+                    {{ form.banco }}
+                    {% if form.banco.errors %}<div class="text-danger small">{{ form.banco.errors }}</div>{% endif %}
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label for="{{ form.banque_envoie.id_for_label }}" class="form-label">{{ form.banque_envoie.label }}</label>
-                    {{ form.banque_envoie }}
-                    {% if form.banque_envoie.errors %}<div class="text-danger small">{{ form.banque_envoie.errors }}</div>{% endif %}
+                    <label for="{{ form.benificiario.id_for_label }}" class="form-label">Selectionner un beneficiaire <span class="text-danger">*</span></label>
+                    {{ form.benificiario }}
+                    {% if form.benificiario.errors %}<div class="text-danger small">{{ form.benificiario.errors }}</div>{% endif %}
                 </div>
             </div>
+
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="{{ form.compte_envoie.id_for_label }}" class="form-label">{{ form.compte_envoie.label }}</label>
-                    {{ form.compte_envoie }}
-                    {% if form.compte_envoie.errors %}<div class="text-danger small">{{ form.compte_envoie.errors }}</div>{% endif %}
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label for="{{ form.date_envoie.id_for_label }}" class="form-label">{{ form.date_envoie.label }}</label>
+                    <label for="{{ form.date_envoie.id_for_label }}" class="form-label">Date virement <span class="text-danger">*</span></label>
                     {{ form.date_envoie }}
                     {% if form.date_envoie.errors %}<div class="text-danger small">{{ form.date_envoie.errors }}</div>{% endif %}
                 </div>
-                <div class="col-md-3 mb-3">
-                    <label for="{{ form.montant_envoie.id_for_label }}" class="form-label">{{ form.montant_envoie.label }}</label>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.montant_envoie.id_for_label }}" class="form-label">Montant <span class="text-danger">*</span></label>
                     {{ form.montant_envoie }}
                     {% if form.montant_envoie.errors %}<div class="text-danger small">{{ form.montant_envoie.errors }}</div>{% endif %}
                 </div>
             </div>
+
             <div class="mb-3">
-                <label for="{{ form.motif_envoie.id_for_label }}" class="form-label">{{ form.motif_envoie.label }}</label>
+                <label for="{{ form.motif_envoie.id_for_label }}" class="form-label">Motif virement <span class="text-danger">*</span></label>
                 {{ form.motif_envoie }}
                 {% if form.motif_envoie.errors %}<div class="text-danger small">{{ form.motif_envoie.errors }}</div>{% endif %}
             </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="{{ form.benificiario.id_for_label }}" class="form-label">{{ form.benificiario.label }}</label>
-                    {{ form.benificiario }}
-                    {% if form.benificiario.errors %}<div class="text-danger small">{{ form.benificiario.errors }}</div>{% endif %}
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label for="{{ form.banco.id_for_label }}" class="form-label">{{ form.banco.label }}</label>
-                    {{ form.banco }}
-                    {% if form.banco.errors %}<div class="text-danger small">{{ form.banco.errors }}</div>{% endif %}
-                </div>
+
+            <div class="mb-3">
+                <label for="fileupload" class="form-label">Document virement</label>
+                <input type="file" class="form-control" id="fileupload" name="fileupload">
             </div>
         </div>
-        <div class="card-footer d-flex gap-2">
-            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+        <div class="card-footer d-flex gap-2 flex-wrap">
+            <button type="submit" class="btn btn-success" id="enregistrerBtn"><i class="fas fa-save"></i> Enregistrer virement</button>
             <a href="{% url 'envio_banco_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
         </div>
     </form>
 </div>
 {% endblock %}
-{% block extra_css %}
-<style>
-    textarea { height: 100px; }
-</style>
+
+{% block extra_js %}
+<script>
+$("#benificiario").on("change", function() {
+    var pk = $(this).val();
+    if (!pk) return;
+    $.ajax({
+        url: "{% url 'get_beneficiario_json' %}",
+        type: "GET",
+        data: { pk: pk },
+        dataType: "json",
+        success: function(res) {
+            if (res.ok) {
+                // Auto-fill hidden fields for nom_envoie, banque_envoie, compte_envoie
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

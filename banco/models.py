@@ -42,6 +42,9 @@ class EnvioBanco(models.Model):
     motif_envoie = models.TextField(verbose_name='Motivo')
     benificiario = models.ForeignKey(Benificiario, on_delete=models.CASCADE, related_name='envios')
     banco = models.ForeignKey(Banco, on_delete=models.CASCADE, related_name='envios')
+    tipo_documento_envoie_banque = models.CharField(max_length=50, blank=True, default='', verbose_name='Tipo documento')
+    nombre_documento_envoie_banque = models.CharField(max_length=255, blank=True, default='', verbose_name='Nombre documento')
+    tamanio_documento_envoie_banque = models.BigIntegerField(default=0, verbose_name='Tamaño documento')
     creado_el = models.DateTimeField(auto_now_add=True)
 
     class Meta:

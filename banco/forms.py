@@ -18,5 +18,7 @@ class BenificiarioForm(BootstrapFormMixin, forms.ModelForm):
 class EnvioBancoForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = EnvioBanco
-        fields = ['nom_envoie', 'banque_envoie', 'compte_envoie', 'date_envoie',
-                  'montant_envoie', 'motif_envoie', 'benificiario', 'banco']
+        fields = ['banco', 'benificiario', 'date_envoie', 'montant_envoie', 'motif_envoie']
+        widgets = {
+            'date_envoie': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+        }

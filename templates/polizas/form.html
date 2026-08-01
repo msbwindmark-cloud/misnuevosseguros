@@ -209,28 +209,53 @@
 </form>
 
 <!-- MODAL AJOUTER ATTESTATION -->
-<div class="modal fade" id="modalAjouterAttestation" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header bg-warning text-dark"><h5 class="modal-title">Ajouter une Attestation</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-        <div class="mb-3">
-            <select class="form-select" id="modal_type_attestation">
-                <option value="">Seleccioner une Type d'Attestation</option>
-                {% for t in tipos_attestation %}<option value="{{ t.id }}">{{ t.type_attestation }}</option>{% endfor %}
-            </select>
+<div class="modal fade" id="modalAjouterAttestation" tabindex="-1" aria-labelledby="modalAjouterAttestationLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="modalAjouterAttestationLabel">Ajouter une Attestation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="form-ajouter-attestation">
+                <div class="modal-body">
+                    <div class="form-group mb-3 mt-3">
+                        <input type="text" name="code_client_modal" id="code_client_modal_att" placeholder="Code Client" class="form-control" value="{{ val.recu }}" readonly required>
+                    </div>
+                    <div class="form-group mb-3 mt-3">
+                        <select class="form-select" aria-label="Default select example" name="type_attestation" id="type_attestation_modal">
+                            <option value="">Seleccioner une Type d'Attestation</option>
+                            {% for t in tipos_attestation %}
+                            <option value="{{ t.id }}">{{ t.type_attestation }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group mb-3 mt-3">
+                        <input type="text" name="id_numero_attestation" id="id_numero_attestation_modal" placeholder="Id Numero Attestation" class="form-control">
+                    </div>
+                    <div class="form-group mb-3 mt-3">
+                        <input type="text" name="numero_attestation" id="numero_attestation_modal" placeholder="Numero Attestation" class="form-control">
+                    </div>
+                    <div class="form-group mb-3 mt-3">
+                        <button hidden class="btn btn-danger fas fa-plus ps-2 pe-2">&nbsp;Ajouter une Attestation&nbsp;</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary ps-2 pe-2 fas fa-sign-out-alt" data-bs-dismiss="modal">&nbsp; Sortir</button>
+                    <button hidden type="button" class="btn btn-primary fas fa-save ps-2 pe-2">&nbsp; Autre chose</button>
+                </div>
+            </form>
         </div>
-        <div class="mb-3">
-            <input type="text" id="modal_numero_attestation" class="form-control" placeholder="Numero Attestation">
-        </div>
-        <button type="button" class="btn btn-warning w-100" onclick="guardarNuevaAttestation()"><i class="fas fa-save"></i> Ajouter une Attestation</button>
     </div>
-</div></div></div>
+</div>
 
 <!-- MODAL CONSULTER ATTESTATION -->
 <div class="modal fade" id="modalConsulterAttestation" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
     <div class="modal-header bg-info text-white"><h5 class="modal-title">Consulter Attestation</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
-        <input type="text" id="searchAttestation" class="form-control mb-3" placeholder="Buscar por tipo o número..." oninput="cargarAttestations(this.value)">
-        <div class="table-responsive" style="max-height:400px"><table class="table table-hover table-sm"><thead><tr><th>Tipo</th><th>Número</th><th>Activo</th><th></th></tr></thead><tbody id="tablaAttestationsBody"></tbody></table></div>
+        <table id="tablaAttestationsConsulta" class="table table-hover table-sm dt-responsive w-100">
+            <thead><tr><th>Tipo</th><th>Número</th><th>Activo</th><th></th></tr></thead>
+            <tbody></tbody>
+        </table>
     </div>
     <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button></div>
 </div></div></div>
@@ -390,37 +415,67 @@ function guardarNuevoCliente() {
 }
 
 // Attestations
-function guardarNuevaAttestation() {
-    const fd = new FormData();
-    fd.append('type_attestation', document.getElementById('modal_type_attestation').value);
-    fd.append('numero_attestation', document.getElementById('modal_numero_attestation').value);
-    fetch('{% url "crear_attestation_ajax" %}', { method:'POST', body:fd })
-        .then(r => r.json()).then(res => {
-            if (res.ok) {
-                document.getElementById('id_attestation').value = res.attestation.type + ' - ' + res.attestation.numero;
-                bootstrap.Modal.getInstance(document.getElementById('modalAjouterAttestation')).hide();
-                document.getElementById('modal_type_attestation').value = '';
-                document.getElementById('modal_numero_attestation').value = '';
-                Swal.fire('Creada','Attestation creada correctamente','success');
+var type_attestation_modal = document.getElementById("type_attestation_modal");
+var id_numero_attestation_modal = document.getElementById("id_numero_attestation_modal");
+var numero_attestation_modal = document.getElementById("numero_attestation_modal");
+var attestation_main = document.getElementById("id_attestation");
+
+type_attestation_modal.addEventListener("change", function() {
+    var selectedValue = type_attestation_modal.value;
+    attestation_main.value = selectedValue;
+    id_numero_attestation_modal.value = selectedValue;
+});
+
+$("#type_attestation_modal").on("input", function() {
+    var inputValue = $(this).val();
+    if (!inputValue) return;
+    $.ajax({
+        url: "{% url 'get_next_attestation' %}",
+        type: "GET",
+        data: { type_id: inputValue },
+        success: function(result) {
+            if (result.ok) {
+                $("#id_attestation").val(result.numero);
+                $("#numero_attestation_modal").val(result.numero);
             } else {
-                Swal.fire('Error',res.error||'Error al crear','error');
+                $("#id_attestation").val(inputValue);
+                $("#numero_attestation_modal").val('');
             }
-        });
-}
+        },
+        error: function(xhr, status, error) {
+            console.log(xhr.responseText);
+        }
+    });
+});
 function seleccionarAttestation(id, type, numero) {
     document.getElementById('id_attestation').value = type + ' - ' + numero;
     bootstrap.Modal.getInstance(document.getElementById('modalConsulterAttestation')).hide();
 }
-function cargarAttestations(q) {
-    fetch('{% url "get_attestations_json" %}?q=' + encodeURIComponent(q))
-        .then(r => r.json()).then(data => {
-            let html = '';
-            data.forEach(a => {
-                html += '<tr><td>' + a.type + '</td><td>' + a.numero + '</td><td>' + (a.active ? 'Sí' : 'No') +
-                    '</td><td><button class="btn btn-sm btn-info" onclick="seleccionarAttestation(' + a.id + ',\'' + a.type.replace(/'/g,"\\'") + '\',\'' + a.numero.replace(/'/g,"\\'") + '\')">Sel.</button></td></tr>';
-            });
-            document.getElementById('tablaAttestationsBody').innerHTML = html || '<tr><td colspan="4" class="text-center">Sin resultados</td></tr>';
+
+var tablaAttestaciones = null;
+function cargarAttestations() {
+    if (tablaAttestaciones) {
+        tablaAttestaciones.destroy();
+        tablaAttestaciones = null;
+    }
+    $('#tablaAttestationsConsulta tbody').html('<tr><td colspan="4" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>');
+    $.get('{% url "get_attestations_json" %}', function(data) {
+        var html = '';
+        data.forEach(function(a) {
+            html += '<tr><td>' + a.type + '</td><td>' + a.numero + '</td><td>' + (a.active ? 'Sí' : 'No') +
+                '</td><td><button class="btn btn-sm btn-info" onclick="seleccionarAttestation(' + a.id + ',\'' + a.type.replace(/'/g,"\\'") + '\',\'' + a.numero.replace(/'/g,"\\'") + '\')">Sel.</button></td></tr>';
         });
+        if (!html) html = '<tr><td colspan="4" class="text-center">Sin resultados</td></tr>';
+        $('#tablaAttestationsConsulta tbody').html(html);
+        tablaAttestaciones = $('#tablaAttestationsConsulta').DataTable({
+            language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
+            lengthMenu: [5, 10, 25, 50, 100],
+            pageLength: 5,
+            responsive: true,
+            order: [[1, 'desc']],
+            columnDefs: [{ orderable: false, targets: [0, 3] }]
+        });
+    });
 }
 // Polizas para Selectionner Police
 function seleccionarPoliza(police, attestation, marque, matricule, produit, designation, assure, code_client, tel, email, adresse, fecha_hoy, du, au) {
@@ -578,9 +633,10 @@ function cargarDocsPoliza() {
 }
 document.getElementById('modalDocumentos')?.addEventListener('shown.bs.modal', cargarDocsPoliza);
 cargarClientes('');
-cargarAttestations('');
+cargarAttestations();
 cargarPolizas('');
-document.getElementById('modalConsulterAttestation')?.addEventListener('shown.bs.modal', function() { cargarAttestations(document.getElementById('searchAttestation').value); });
+$('#modalConsulterAttestation').on('shown.bs.modal', function() { cargarAttestations(); });
+$('#modalConsulterAttestation').on('hidden.bs.modal', function() { if (tablaAttestaciones) { tablaAttestaciones.destroy(); tablaAttestaciones = null; } });
 document.getElementById('modalSelectionnerPolice')?.addEventListener('shown.bs.modal', function() { cargarPolizas(document.getElementById('searchPoliza').value); });
 document.getElementById('modalClientes')?.addEventListener('shown.bs.modal', function() { cargarClientes(document.getElementById('searchClient').value); });
 
