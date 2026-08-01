@@ -5,6 +5,7 @@
     <a href="{% url 'envio_banco_list' %}" class="btn btn-sm btn-primary"><i class="fas fa-exchange-alt"></i> Envíos</a>
     <a href="{% url 'banco_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-university"></i> Enregistrer une banque</a>
     <a href="{% url 'benificiario_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-hand-holding-usd"></i> Enregistrer un beneficiaire</a>
+    <a href="{% url 'poliza_list' %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-file-invoice"></i> Pólizas</a>
     {% if user.is_superuser %}
     <a href="{% url 'admin:index' %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-cog"></i> Panel Admin</a>
     {% endif %}
@@ -60,6 +61,7 @@
         </div>
         <div class="card-footer d-flex gap-2 flex-wrap">
             <button type="submit" class="btn btn-success" id="enregistrerBtn"><i class="fas fa-save"></i> Enregistrer virement</button>
+            <a href="{% url 'envio_banco_last_pdf' %}" target="_blank" class="btn btn-primary"><i class="fas fa-print"></i> Imprimer l'envoie Virement</a>
             <a href="{% url 'envio_banco_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
         </div>
     </form>

@@ -1,8 +1,12 @@
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django.http import HttpResponse
+from django.shortcuts import render, redirect
+from django.http import HttpResponse, JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
+from django.contrib import messages
+from django.views import View
+from datetime import date
 from .models import EnvioCourrier, Destinataire, Expediteur
 from .forms import DestinataireForm, ExpediteurForm, EnvioCourrierForm
 from reportlab.lib.pagesizes import A4
@@ -75,11 +79,59 @@ class EnvioCourrierListView(ListView):
     context_object_name = 'envios'
 
 @method_decorator(staff_member_required, name='dispatch')
-class EnvioCourrierCreateView(CreateView):
-    model = EnvioCourrier
-    form_class = EnvioCourrierForm
+class EnvioCourrierCreateView(View):
     template_name = 'courrier/envio_form.html'
     success_url = reverse_lazy('courrier_list')
+
+    def get(self, request):
+        form = EnvioCourrierForm()
+        expediteurs = Expediteur.objects.all()
+        destinataires = Destinataire.objects.all()
+        return render(request, self.template_name, {
+            'form': form, 'expediteurs': expediteurs, 'destinataires': destinataires,
+            'today': date.today(),
+        })
+
+    def post(self, request):
+        data = request.POST
+        files = request.FILES
+        expediteur_id = data.get('expediteur')
+        destinataire_id = data.get('destinataire')
+        try:
+            exp = Expediteur.objects.get(pk=int(expediteur_id)) if expediteur_id else None
+        except (Expediteur.DoesNotExist, ValueError, TypeError):
+            exp = None
+        try:
+            des = Destinataire.objects.get(pk=int(destinataire_id)) if destinataire_id else None
+        except (Destinataire.DoesNotExist, ValueError, TypeError):
+            des = None
+
+        envio = EnvioCourrier.objects.create(
+            date_envoie_courrier=data.get('date_envoie_courrier') or None,
+            expediteur_envoie_courrier=exp.nom_expediteur if exp else data.get('expediteur_envoie_courrier', ''),
+            addresse_expediteur_envoie_courrier=exp.adresse_expediteur if exp else data.get('addresse_expediteur_envoie_courrier', ''),
+            destinataire_envoie_courrier=des.nom_destinataire if des else data.get('destinataire_envoie_courrier', ''),
+            addresse_envoie_courrier=des.adresse_destinataire if des else data.get('addresse_envoie_courrier', ''),
+        )
+
+        file = files.get('fileupload')
+        if file:
+            ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
+            import os
+            from django.conf import settings
+            upload_dir = settings.MEDIA_ROOT / 'uploads_courrier'
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            filepath = upload_dir / file.name
+            with open(str(filepath), 'wb+') as dest:
+                for chunk in file.chunks():
+                    dest.write(chunk)
+            envio.tipo_documento_envoie_courrier = ext
+            envio.nombre_documento_envoie_courrier = file.name
+            envio.tamanio_documento_envoie_courrier = file.size
+            envio.save()
+
+        messages.success(request, 'Envoie courrier enregistré correctement')
+        return redirect(self.success_url)
 
 @method_decorator(staff_member_required, name='dispatch')
 class EnvioCourrierUpdateView(UpdateView):
@@ -88,6 +140,33 @@ class EnvioCourrierUpdateView(UpdateView):
     template_name = 'courrier/envio_form.html'
     success_url = reverse_lazy('courrier_list')
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['expediteurs'] = Expediteur.objects.all()
+        ctx['destinataires'] = Destinataire.objects.all()
+        return ctx
+
+    def form_valid(self, form):
+        self.object = form.save(commit=False)
+        exp_id = self.request.POST.get('expediteur')
+        des_id = self.request.POST.get('destinataire')
+        try:
+            exp = Expediteur.objects.get(pk=int(exp_id)) if exp_id else None
+        except (Expediteur.DoesNotExist, ValueError, TypeError):
+            exp = None
+        try:
+            des = Destinataire.objects.get(pk=int(des_id)) if des_id else None
+        except (Destinataire.DoesNotExist, ValueError, TypeError):
+            des = None
+        if exp:
+            self.object.expediteur_envoie_courrier = exp.nom_expediteur
+            self.object.addresse_expediteur_envoie_courrier = exp.adresse_expediteur
+        if des:
+            self.object.destinataire_envoie_courrier = des.nom_destinataire
+            self.object.addresse_envoie_courrier = des.adresse_destinataire
+        self.object.save()
+        return redirect(self.success_url)
+
 @method_decorator(staff_member_required, name='dispatch')
 class EnvioCourrierDeleteView(DeleteView):
     model = EnvioCourrier
@@ -95,10 +174,19 @@ class EnvioCourrierDeleteView(DeleteView):
     success_url = reverse_lazy('courrier_list')
 
 @staff_member_required
+def envio_courrier_last_pdf(request):
+    envio = EnvioCourrier.objects.first()
+    if not envio:
+        return HttpResponse('No hay envíos de courrier', status=404)
+    return envio_courrier_pdf(request, envio.pk)
+
+
+@staff_member_required
 def envio_courrier_pdf(request, pk):
     from reportlab.pdfgen import canvas as canvasmod
     from reportlab.lib.units import mm
     from .models import EnvioCourrier
+    from datetime import datetime
 
     envio = EnvioCourrier.objects.get(pk=pk)
     buffer = BytesIO()
@@ -123,11 +211,17 @@ def envio_courrier_pdf(request, pk):
     y -= 7 * mm
     fichero = envio.nombre_documento_envoie_courrier or ''
     c.drawString(x, y, f'Fichiers envoie courrier        :     {fichero}')
+    y -= 14 * mm
+    c.setFont('Helvetica', 10)
+    c.drawString(x, y, f'Document: Justificatif courrier N {envio.id}')
+    y -= 5 * mm
+    c.drawString(x, y, f'Imprime le: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 
     c.save()
     buffer.seek(0)
+    nombre = f"justificatif_courrier_{envio.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     return HttpResponse(buffer, content_type='application/pdf', headers={
-        'Content-Disposition': f'attachment; filename="justificatif.pdf"'
+        'Content-Disposition': f'attachment; filename="{nombre}"'
     })
 
 @staff_member_required
@@ -199,3 +293,81 @@ def export_envios_courrier_excel(request):
     response['Content-Disposition'] = 'attachment; filename="envios_courrier.xlsx"'
     wb.save(response)
     return response
+
+
+@staff_member_required
+def get_expediteur_json(request):
+    pk = request.GET.get('pk', '')
+    if not pk or not pk.isdigit():
+        return JsonResponse({'ok': False})
+    try:
+        e = Expediteur.objects.get(pk=int(pk))
+        return JsonResponse({'ok': True, 'nom': e.nom_expediteur, 'addresse': e.adresse_expediteur})
+    except Expediteur.DoesNotExist:
+        return JsonResponse({'ok': False})
+
+
+@staff_member_required
+def get_destinataire_json(request):
+    pk = request.GET.get('pk', '')
+    if not pk or not pk.isdigit():
+        return JsonResponse({'ok': False})
+    try:
+        d = Destinataire.objects.get(pk=int(pk))
+        return JsonResponse({'ok': True, 'nom': d.nom_destinataire, 'addresse': d.adresse_destinataire})
+    except Destinataire.DoesNotExist:
+        return JsonResponse({'ok': False})
+
+
+# --- AJAX Expediteur (generer_expediteur.php) ---
+
+@method_decorator(staff_member_required, name='dispatch')
+class ExpediteurAjaxView(View):
+    def post(self, request):
+        action = request.POST.get('action', '')
+        if action == 'insert':
+            Expediteur.objects.create(
+                nom_expediteur=request.POST.get('nom_expediteur', ''),
+                adresse_expediteur=request.POST.get('adresse_expediteur', ''),
+            )
+            return JsonResponse({'ok': True})
+        if request.POST.get('edit_id'):
+            e = Expediteur.objects.get(pk=request.POST.get('edit_id'))
+            return JsonResponse({'id': e.pk, 'nom_expediteur': e.nom_expediteur, 'adresse_expediteur': e.adresse_expediteur})
+        if action == 'update':
+            e = Expediteur.objects.get(pk=request.POST.get('id_expediteur'))
+            e.nom_expediteur = request.POST.get('nom_expediteur', e.nom_expediteur)
+            e.adresse_expediteur = request.POST.get('adresse_expediteur', e.adresse_expediteur)
+            e.save()
+            return JsonResponse({'ok': True})
+        if request.POST.get('del_id'):
+            Expediteur.objects.get(pk=request.POST.get('del_id')).delete()
+            return JsonResponse({'ok': True})
+        return JsonResponse({'ok': False, 'error': 'Acción no reconocida'})
+
+
+# --- AJAX Destinataire (generer_destinataire.php) ---
+
+@method_decorator(staff_member_required, name='dispatch')
+class DestinataireAjaxView(View):
+    def post(self, request):
+        action = request.POST.get('action', '')
+        if action == 'insert':
+            Destinataire.objects.create(
+                nom_destinataire=request.POST.get('nom_destinataire', ''),
+                adresse_destinataire=request.POST.get('adresse_destinataire', ''),
+            )
+            return JsonResponse({'ok': True})
+        if request.POST.get('edit_id'):
+            d = Destinataire.objects.get(pk=request.POST.get('edit_id'))
+            return JsonResponse({'id': d.pk, 'nom_destinataire': d.nom_destinataire, 'adresse_destinataire': d.adresse_destinataire})
+        if action == 'update':
+            d = Destinataire.objects.get(pk=request.POST.get('id_destinataire'))
+            d.nom_destinataire = request.POST.get('nom_destinataire', d.nom_destinataire)
+            d.adresse_destinataire = request.POST.get('adresse_destinataire', d.adresse_destinataire)
+            d.save()
+            return JsonResponse({'ok': True})
+        if request.POST.get('del_id'):
+            Destinataire.objects.get(pk=request.POST.get('del_id')).delete()
+            return JsonResponse({'ok': True})
+        return JsonResponse({'ok': False, 'error': 'Acción no reconocida'})

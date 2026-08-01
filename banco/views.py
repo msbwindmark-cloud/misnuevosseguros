@@ -157,6 +157,14 @@ class EnvioBancoDeleteView(DeleteView):
 
 
 @staff_member_required
+def envio_banco_last_pdf(request):
+    envio = EnvioBanco.objects.first()
+    if not envio:
+        return HttpResponse('No hay virements', status=404)
+    return envio_banco_pdf(request, envio.pk)
+
+
+@staff_member_required
 def envio_banco_pdf(request, pk):
     from num2words import num2words
     from reportlab.lib.pagesizes import A4
@@ -276,10 +284,16 @@ def envio_banco_pdf(request, pk):
     c.setFont('Helvetica', 12)
     c.drawString(x, y_salut, 'Veuillez agreer, Messieurs, nos salutations distinguees.')
 
+    from datetime import datetime
+    c.setFont('Helvetica', 9)
+    c.drawString(x, y_salut - 10 * mm, f'Document: Ordre de virement N {envio.id}')
+    c.drawString(x, y_salut - 14 * mm, f'Imprime le: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
+
     c.save()
     buffer.seek(0)
+    nombre = f"ordre_virement_{envio.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     return HttpResponse(buffer, content_type='application/pdf', headers={
-        'Content-Disposition': f'attachment; filename="envio_{envio.id}.pdf"'
+        'Content-Disposition': f'attachment; filename="{nombre}"'
     })
 
 
