@@ -34,6 +34,7 @@
                         <th>Expert</th>
                         <th>Montant</th>
                         <th>Pago</th>
+                        <th>Completo</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -58,6 +59,9 @@
                         <td>{{ s.nom_expert|default:'-' }}</td>
                         <td>{{ s.montant|default:'0' }} MAD</td>
                         <td>{{ s.date_payement|date:"d/m/Y"|default:'-' }}</td>
+                        <td class="text-center">
+                            <input type="checkbox" class="form-check-input check-completo" data-id="{{ s.id }}"{% if s.completo %} checked{% endif %}>
+                        </td>
                         <td>
                             <a href="{% url 'sinistro_update' s.id %}" class="btn btn-warning btn-sm" title="Editar"><i class="fas fa-edit"></i></a>
                             <button type="button" class="btn btn-info btn-sm btn-consultar-docs-sin" data-id="{{ s.id }}" title="Consulter les documents"><i class="fas fa-folder-open"></i></button>
@@ -70,7 +74,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="12" class="text-center">No hay siniestros</td></tr>
+                    <tr><td colspan="13" class="text-center">No hay siniestros</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -147,6 +151,33 @@ function actualizarSeleccion() {
     checkTodos.checked = (marcados > 0 && marcados === total);
     checkTodos.indeterminate = (marcados > 0 && marcados < total);
 }
+
+// === COMPLETO (toggle rápido) ===
+document.querySelectorAll('.check-completo').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+        var id = this.getAttribute('data-id');
+        var valor = this.checked ? '1' : '0';
+        fetch('{% url "sinistro_completo" 0 %}'.replace('/0/', '/' + id + '/'), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'completo=' + valor
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.status !== 'ok') {
+                cb.checked = !cb.checked;
+                Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo actualizar.' });
+            }
+        })
+        .catch(function() {
+            cb.checked = !cb.checked;
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo actualizar.' });
+        });
+    });
+});
 
 document.getElementById('checkTodos').addEventListener('change', function () {
     tablaSiniestros.$('input.check-item').prop('checked', this.checked);

@@ -55,7 +55,7 @@ class SinistroCreateView(View):
             num = 1
         sugerido = f'S-{num}/{año}'
 
-        val = {k: '' for k in ['code_sinistre','ref_sinistre','cod_sig_correcto','date_operation','date_sinistre','date_reception','police','assure','categorie_assurance','reference_assurance','benificiaire','reference_assistance','nom_formule','nom_expert','reference_reglement','document_de_base','montant','reference_payement','date_payement','id_recu']}
+        val = {k: '' for k in ['code_sinistre','ref_sinistre','cod_sig_correcto','completo','date_operation','date_sinistre','date_reception','police','assure','categorie_assurance','reference_assurance','benificiaire','reference_assistance','nom_formule','nom_expert','reference_reglement','document_de_base','montant','reference_payement','date_payement','id_recu']}
         val['code_sinistre'] = sugerido
         val['cod_sig_correcto'] = '0'
         return render(request, self.template_name, {
@@ -98,6 +98,7 @@ class SinistroCreateView(View):
             montant=float(data.get('montant', 0)) if data.get('montant') else None,
             date_payement=data.get('date_payement') or None,
             cod_sig_correcto=data.get('cod_sig_correcto') == '1',
+            completo=data.get('completo') == '1',
             poliza=poliza,
         )
 
@@ -291,6 +292,7 @@ class SinistroUpdateView(View):
             'code_sinistre': sinistro.code_sinistre or '',
             'ref_sinistre': sinistro.ref_sinistre or '',
             'cod_sig_correcto': '1' if sinistro.cod_sig_correcto else '0',
+            'completo': '1' if sinistro.completo else '',
             'date_operation': sinistro.date_operation.strftime('%Y-%m-%d') if sinistro.date_operation else '',
             'date_sinistre': sinistro.date_sinistre.strftime('%Y-%m-%d') if sinistro.date_sinistre else '',
             'date_reception': sinistro.date_reception.strftime('%Y-%m-%d') if sinistro.date_reception else '',
@@ -353,6 +355,7 @@ class SinistroUpdateView(View):
         sinistro.montant = float(data.get('montant', 0)) if data.get('montant') else None
         sinistro.date_payement = data.get('date_payement') or sinistro.date_payement
         sinistro.cod_sig_correcto = data.get('cod_sig_correcto') == '1'
+        sinistro.completo = data.get('completo') == '1'
         sinistro.poliza = poliza
         sinistro.save()
 
@@ -401,6 +404,17 @@ def sinistro_delete(request, pk):
         sinistro.delete()
         messages.success(request, f'Siniestro {code} eliminado correctamente.')
     return redirect('sinistro_list')
+
+
+def actualizar_completo_siniestro(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'mensaje': 'Método no permitido'}, status=405)
+    sinistro = get_object_or_404(Sinistro, pk=pk)
+    valor = request.POST.get('completo')
+    completo = valor in ('1', 'true', 'True', 'on')
+    sinistro.completo = completo
+    sinistro.save(update_fields=['completo'])
+    return JsonResponse({'status': 'ok', 'actualizado': True, 'completo': completo})
 
 
 def sinistro_bulk_delete(request):

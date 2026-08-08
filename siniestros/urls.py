@@ -13,6 +13,7 @@ urlpatterns = [
     path('api/polizas/', views.get_polizas_json, name='get_polizas_siniestro'),
     path('api/poliza/<int:pk>/documentos/', views.get_poliza_documentos, name='get_poliza_documentos'),
     path('api/<int:pk>/documentos/', views.sinistro_documentos_data, name='sinistro_documentos_data'),
+    path('api/<int:pk>/completo/', views.actualizar_completo_siniestro, name='sinistro_completo'),
     path('<int:pk>/docs/agregar/', views.sinistro_documentos_agregar, name='sinistro_documentos_agregar'),
     path('docs/descargar/<int:pk>/', views.descargar_documento_siniestro, name='descargar_documento_siniestro'),
 ]

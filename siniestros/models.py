@@ -58,6 +58,7 @@ class Sinistro(models.Model):
     montant = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name='Monto')
     date_payement = models.DateField(blank=True, null=True, verbose_name='Fecha de pago')
     cod_sig_correcto = models.BooleanField(default=False, verbose_name='Código correcto')
+    completo = models.BooleanField(default=False, verbose_name='Completo')
     poliza = models.ForeignKey(Poliza, on_delete=models.SET_NULL, null=True, blank=True, related_name='siniestros')
     creado_el = models.DateTimeField(auto_now_add=True)
 
