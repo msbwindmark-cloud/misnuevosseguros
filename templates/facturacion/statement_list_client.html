@@ -11,6 +11,8 @@
             <a href="{% url 'statement_by_client' cliente_code %}" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF Global</a>
             <button type="button" class="btn btn-info btn-sm" id="btnExportExcelR"><i class="fas fa-file-excel"></i> La liste en excel</button>
             <button type="button" class="btn btn-success btn-sm" id="btnExporterFusionneR"><i class="fas fa-file-excel"></i> Exporter Fusionné (Taxes+TP)</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btnExportSelR"><i class="fas fa-file-excel"></i> Exporter les lignes sélectionnées (Excel)</button>
+            <button type="button" class="btn btn-danger btn-sm" id="btnExportSelFusionneR"><i class="fas fa-file-excel"></i> Exporter les lignes sélectionnées Fusionnées (Taxes+TP)</button>
             <button type="button" class="btn btn-success btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Imprimer toute la liste</button>
             <button type="button" class="btn btn-secondary btn-sm" id="btnEliminarLineaR"><i class="fas fa-trash"></i> Eliminer la ligne sélectionnée</button>
             <a href="{% url 'poliza_list' %}#releves" class="btn btn-light btn-sm"><i class="fas fa-arrow-left"></i> Retourner a la liste</a>
@@ -207,5 +209,98 @@
         link.download = titulo + '_Fusionnee.xls';
         link.click();
     });
+
+    // Export selected (checked) rows matching PHP format (HTML table -> Excel)
+    function parseNumRel(v) {
+        if (v === null || v === undefined) return 0;
+        v = String(v).trim().replace(/\s/g, '').replace(',', '.');
+        return parseFloat(v) || 0;
+    }
+    function escHtmlRel(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function descargarExcelHTMLRel(innerHtml, filename) {
+        innerHtml = innerHtml
+            .replace(/á/g, '&aacute;').replace(/é/g, '&eacute;')
+            .replace(/í/g, '&iacute;').replace(/ó/g, '&oacute;')
+            .replace(/ú/g, '&uacute;').replace(/º/g, '&ordm;');
+        var template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"><head></head><body><table>' + innerHtml + '</table></body></html>';
+        var blob = new Blob([template], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename + '.xls';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    function exportarRelevesSeleccionados(fusionar) {
+        var filas = tablaReleves.$('input.check-releve:checked').closest('tr');
+        if (filas.length === 0) {
+            Swal.fire('Atención', 'Seleccione al menos una línea para exportar', 'warning');
+            return;
+        }
+        var d = new Date();
+        var n = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+        var le_client = '{{ cliente_nom }}';
+        var titulo = 'R_' + le_client + '_' + n;
+
+        var headers = ['N&deg; Police', 'P&eacute;riode', 'D&eacute;signation', 'Prime Nette', 'Taxes', 'T.P', 'Accessoires', 'Total TTC'];
+        if (fusionar) headers = ['N&deg; Police', 'P&eacute;riode', 'D&eacute;signation', 'Prime Nette', 'Taxes &amp; T.P.', 'Accessoires', 'Total TTC'];
+        var ncols = headers.length;
+
+        var html = '';
+        html += '<tr><td colspan="' + ncols + '" style="text-align:left;">Rabat, le : {{ fecha_hoy }}</td></tr>';
+        html += '<tr><td colspan="' + ncols + '" style="text-align:left; font-weight:bold;">' + escHtmlRel('{{ cliente_nom }}') + '</td></tr>';
+        html += '<tr><td colspan="' + ncols + '" style="text-align:left;">' + escHtmlRel('{{ cliente_adresse }}') + '</td></tr>';
+        html += '<tr><td colspan="' + ncols + '" style="text-align:left; font-weight:bold; color:#dc3545; text-decoration:underline;">' + escHtmlRel(document.getElementById('el_cliente').innerText.trim()) + '</td></tr>';
+        html += '<tr><td colspan="' + ncols + '"></td></tr>';
+        html += '<tr>' + headers.map(function (h) { return '<th style="border:1px solid black; width:200px;">' + h + '</th>'; }).join('') + '</tr>';
+
+        var totPrime = 0, totTaxes = 0, totTp = 0, totAcc = 0, totTtc = 0;
+        var cuerpo = '';
+        filas.each(function () {
+            var celdas = $(this).find('td');
+            var police = escHtmlRel(celdas.eq(1).text().trim());
+            var periode = escHtmlRel(celdas.eq(2).text().trim());
+            var designation = escHtmlRel(celdas.eq(3).text().trim());
+            var prime = parseNumRel(celdas.eq(4).text());
+            var taxes = parseNumRel(celdas.eq(5).text());
+            var tp = parseNumRel(celdas.eq(6).text());
+            var acc = parseNumRel(celdas.eq(7).text());
+            var ttc = parseNumRel(celdas.eq(8).text());
+
+            totPrime += prime;
+            totTaxes += taxes;
+            totTp += tp;
+            totAcc += acc;
+            totTtc += ttc;
+
+            var cells;
+            if (fusionar) {
+                cells = [police, periode, designation, prime.toFixed(2), (taxes + tp).toFixed(2), acc.toFixed(2), ttc.toFixed(2)];
+            } else {
+                cells = [police, periode, designation, prime.toFixed(2), taxes.toFixed(2), tp.toFixed(2), acc.toFixed(2), ttc.toFixed(2)];
+            }
+            cuerpo += '<tr>' + cells.map(function (c) { return '<td style="border:1px solid black; width:200px; vertical-align:middle;">' + c + '</td>'; }).join('') + '</tr>';
+        });
+
+        var pie = '';
+        var totales = [
+            ['Total Primes Nettes:', totPrime.toFixed(2)],
+            ['Total Taxes &amp; T.P.:', (totTaxes + totTp).toFixed(2)],
+            ['Total Accessoires:', totAcc.toFixed(2)],
+            ['Total TTC:', totTtc.toFixed(2)]
+        ];
+        totales.forEach(function (t) {
+            pie += '<tr><td colspan="' + (ncols - 2) + '" style="border:none;"></td>' +
+                   '<td style="font-weight:bold; text-align:right; border:1px solid black; white-space:nowrap; background-color:#f9f9f9;">' + t[0] + '</td>' +
+                   '<td style="font-weight:bold; text-align:right; border:1px solid black; background-color:#f9f9f9;">' + t[1] + '</td></tr>';
+        });
+
+        descargarExcelHTMLRel(html + cuerpo + pie, fusionar ? titulo + '_Fusionnee_Selection' : titulo + '_Selection');
+    }
+
+    $('#btnExportSelR').on('click', function () { exportarRelevesSeleccionados(false); });
+    $('#btnExportSelFusionneR').on('click', function () { exportarRelevesSeleccionados(true); });
 </script>
 {% endblock %}
