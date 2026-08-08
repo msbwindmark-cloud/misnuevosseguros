@@ -53,6 +53,14 @@ class Poliza(models.Model):
         verbose_name = 'Póliza'
         verbose_name_plural = 'Pólizas'
         ordering = ['-recu']
+        indexes = [
+            models.Index(fields=['fecha_hoy'], name='idx_poliza_fecha_hoy'),
+            models.Index(fields=['totale'], name='idx_poliza_totale'),
+            models.Index(fields=['police'], name='idx_poliza_police'),
+            models.Index(fields=['assure'], name='idx_poliza_assure'),
+            models.Index(fields=['matricule'], name='idx_poliza_matricule'),
+            models.Index(fields=['code_client'], name='idx_poliza_code_client'),
+        ]
 
     def __str__(self):
         return f"Recibo {self.recu} - {self.assure}"

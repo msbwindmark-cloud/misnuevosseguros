@@ -51,12 +51,6 @@ class PolizaListView(ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        recus = list(Poliza.objects.values_list('recu', flat=True))
-        from documentos.models import DocumentoUsuario
-        doc_ids = set(DocumentoUsuario.objects.filter(id_usuario__in=recus).values_list('id_usuario', flat=True).distinct())
-        ctx['polizas_con_docs'] = doc_ids
-        docs_count = DocumentoUsuario.objects.filter(id_usuario__in=recus).values('id_usuario').annotate(total=Count('id')).values_list('id_usuario', 'total')
-        ctx['docs_count'] = {r: t for r, t in docs_count}
         ctx['filtrando_docs'] = self.request.GET.get('con_docs') == '1'
         ctx['q'] = self.request.GET.get('q', '')
         ctx['fecha_desde'] = self.request.GET.get('fecha_desde', '')
@@ -483,13 +477,66 @@ def poliza_datatables_data(request):
         )
 
     records_total = Poliza.objects.count()
+
+    q = request.GET.get('q')
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+    if q:
+        from django.db.models import Q
+        qs = qs.filter(
+            Q(police__icontains=q) |
+            Q(assure__icontains=q) |
+            Q(matricule__icontains=q) |
+            Q(recu__icontains=q)
+        )
+    if fecha_desde:
+        qs = qs.filter(fecha_hoy__gte=fecha_desde)
+    if fecha_hasta:
+        qs = qs.filter(fecha_hoy__lte=fecha_hasta)
+    if request.GET.get('con_docs') == '1':
+        doc_ids = set(DocumentoUsuario.objects.values_list('id_usuario', flat=True).distinct())
+        qs = qs.filter(recu__in=doc_ids)
+
     records_filtered = qs.count()
     polizas = qs.order_by(order_field)[start:start + length]
 
+    recus = [p.recu for p in polizas]
+    docs_count_map = {}
+    if recus:
+        from collections import Counter
+        from documentos.models import DocumentoUsuario
+        counts = (DocumentoUsuario.objects
+                  .filter(id_usuario__in=recus)
+                  .values('id_usuario')
+                  .annotate(total=Count('id'))
+                  .values_list('id_usuario', 'total'))
+        docs_count_map = dict(counts)
+
     data = []
     for p in polizas:
+        acciones = (
+            '<a href="{upd}" class="btn btn-warning btn-sm" title="Modifier"><i class="fas fa-edit"></i></a> '
+            '<a href="{det}" class="btn btn-info btn-sm" title="Detalle"><i class="fas fa-eye"></i></a> '
+            '<a href="{pdf1}" class="btn btn-success btn-sm" target="_blank" title="PDF sin encabezado"><i class="fas fa-file-pdf"></i></a> '
+            '<a href="{pdf2}" class="btn btn-primary btn-sm" target="_blank" title="PDF con encabezado"><i class="fas fa-file-pdf"></i></a> '
+            '<a href="{fac}" class="btn btn-secondary btn-sm" target="_blank" title="Factura"><i class="fas fa-file-invoice"></i></a> '
+            '<a href="{rel}" class="btn btn-warning btn-sm" target="_blank" title="Relevé Excel"><i class="fas fa-file-excel"></i></a> '
+            '<a href="{doc}" class="btn btn-primary btn-sm" title="Añadir Documento"><i class="fas fa-paperclip"></i></a> '
+            '<a href="#" class="btn btn-danger btn-sm" onclick="confirmarEliminar({recu})" title="Eliminar"><i class="fas fa-trash"></i></a>'
+        ).format(
+            recu=p.recu,
+            upd=reverse('poliza_update', args=[p.recu]),
+            det=reverse('poliza_detail', args=[p.recu]),
+            pdf1=reverse('generate_poliza_pdf_sans_entete', args=[p.recu]),
+            pdf2=reverse('generate_poliza_pdf_with_header', args=[p.recu]),
+            fac=reverse('invoice_by_receipt', args=[p.recu]),
+            rel=reverse('statement_by_receipt_excel', args=[p.recu]),
+            doc=reverse('add_document_to_poliza', args=[p.recu]),
+        )
         data.append({
             'recu': p.recu,
+            'detalle': reverse('poliza_detail', kwargs={'pk': p.recu}),
+            'docs': docs_count_map.get(p.recu, 0),
             'fecha_hoy': p.fecha_hoy.strftime('%d/%m/%Y') if p.fecha_hoy else '',
             'letype': p.letype or '',
             'police': p.police or '',
@@ -497,6 +544,7 @@ def poliza_datatables_data(request):
             'assure': str(p.assure or ''),
             'totale': str(p.totale or ''),
             'reste': str(p.reste or ''),
+            'acciones': acciones,
         })
     return JsonResponse({
         'draw': draw,
