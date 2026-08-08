@@ -1,396 +1,581 @@
-{% extends 'base.html' %}
-{% load poliza_extras %}
-{% block title %}Pólizas - Proyecto SIS{% endblock %}
-{% block content %}
+{% extends 'base.html' %} {% load poliza_extras %} {% block title %}Pólizas -
+Proyecto SIS{% endblock %} {% block content %}
 <div class="card">
-    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-        <h4 class="mb-0"><i class="fas fa-file-invoice"></i> Lista de Pólizas</h4>
-        <div>
-            <button type="button" id="btnEliminarSeleccion" class="btn btn-danger btn-sm" disabled><i class="fas fa-trash"></i> Eliminar sélection (<span id="contadorSel">0</span>)</button>
-            <a href="{% url 'poliza_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nueva</a>
-            <a href="{% url 'export_polizas_pdf' %}" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a>
-            <a href="{% url 'export_polizas_excel' %}" class="btn btn-info btn-sm"><i class="fas fa-file-excel"></i> Excel</a>
-            <a href="{% url 'sinistro_list' %}" class="btn btn-warning btn-sm"><i class="fas fa-list"></i> Listado de Siniestros</a>
-            <a href="{% url 'poliza_create' %}" class="btn btn-light btn-sm"><i class="fas fa-arrow-left"></i> Formulaire</a>
-            <a href="{% url 'export_polizas_eliminadas_excel' %}" class="btn btn-outline-light btn-sm"><i class="fas fa-trash"></i> Eliminadas</a>
-            <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalFactures"><i class="fas fa-file-invoice"></i> Factures</button>
-            <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalReleves"><i class="fas fa-file-excel"></i> Relevés</button>
-            {% if filtrando_docs %}
-            <a href="{% url 'poliza_list' %}" class="btn btn-info btn-sm"><i class="fas fa-times"></i> Tous</a>
-            {% else %}
-            <a href="{% url 'poliza_list' %}?con_docs=1" class="btn btn-outline-info btn-sm"><i class="fas fa-paperclip"></i> Avec documents</a>
-            {% endif %}
-        </div>
+  <div
+    class="card-header bg-dark text-white d-flex justify-content-between align-items-center"
+  >
+    <h4 class="mb-0"><i class="fas fa-file-invoice"></i> Lista de Pólizas</h4>
+    <div>
+      <button
+        type="button"
+        id="btnEliminarSeleccion"
+        class="btn btn-danger btn-sm"
+        disabled
+      >
+        <i class="fas fa-trash"></i> Eliminar sélection (<span id="contadorSel"
+          >0</span
+        >)
+      </button>
+      <a href="{% url 'poliza_create' %}" class="btn btn-success btn-sm"
+        ><i class="fas fa-plus"></i> Nueva</a
+      >
+      <a href="{% url 'export_polizas_pdf' %}" class="btn btn-danger btn-sm"
+        ><i class="fas fa-file-pdf"></i> PDF</a
+      >
+      <a href="{% url 'export_polizas_excel' %}" class="btn btn-info btn-sm"
+        ><i class="fas fa-file-excel"></i> Excel</a
+      >
+      <a href="{% url 'sinistro_list' %}" class="btn btn-warning btn-sm"
+        ><i class="fas fa-list"></i> Listado de Siniestros</a
+      >
+      <a href="{% url 'poliza_create' %}" class="btn btn-light btn-sm"
+        ><i class="fas fa-arrow-left"></i> Formulaire</a
+      >
+      <a
+        href="{% url 'export_polizas_eliminadas_excel' %}"
+        class="btn btn-outline-light btn-sm"
+        ><i class="fas fa-trash"></i> Eliminadas</a
+      >
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        data-bs-toggle="modal"
+        data-bs-target="#modalFactures"
+      >
+        <i class="fas fa-file-invoice"></i> Factures
+      </button>
+      <button
+        type="button"
+        class="btn btn-warning btn-sm"
+        data-bs-toggle="modal"
+        data-bs-target="#modalReleves"
+      >
+        <i class="fas fa-file-excel"></i> Relevés
+      </button>
+      {% if filtrando_docs %}
+      <a href="{% url 'poliza_list' %}" class="btn btn-info btn-sm"
+        ><i class="fas fa-times"></i> Tous</a
+      >
+      {% else %}
+      <a
+        href="{% url 'poliza_list' %}?con_docs=1"
+        class="btn btn-outline-info btn-sm"
+        ><i class="fas fa-paperclip"></i> Avec documents</a
+      >
+      {% endif %}
     </div>
-    <div class="card-body">
-        <form method="get" class="row mb-3 g-2 align-items-end">
-            <div class="col-auto">
-                <label class="form-label mb-0">Date du</label>
-                <input type="date" class="form-control" name="fecha_desde" value="{{ fecha_desde }}">
-            </div>
-            <div class="col-auto">
-                <label class="form-label mb-0">Date au</label>
-                <input type="date" class="form-control" name="fecha_hasta" value="{{ fecha_hasta }}">
-            </div>
-            <div class="col-auto">
-                <label class="form-label mb-0">Buscar</label>
-                <input type="text" class="form-control" name="q" value="{{ q }}" placeholder="Póliza, asegurado, matrícula...">
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Buscar</button>
-            </div>
-            {% if filtrando_fechas or q %}
-            <div class="col-auto">
-                <a href="{% url 'poliza_list' %}" class="btn btn-outline-secondary">Tous</a>
-            </div>
-            {% endif %}
-            <div class="col-auto">
-                <a href="{% url 'export_polizas_excel' %}?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}" class="btn btn-info"><i class="fas fa-file-excel"></i> Excel (filtre)</a>
-            </div>
-        </form>
-        <div class="row mb-3">
-            <div class="col-8">
-                <a href="{% url 'envio_banco_create' %}" class="btn btn-warning"><i class="fas fa-exchange-alt"></i> Generar un virement</a>
-                <a href="{% url 'envio_banco_list' %}" class="btn btn-outline-warning btn-sm"><i class="fas fa-list"></i> Lista</a>
-                <a href="{% url 'courrier_create' %}" class="btn btn-primary"><i class="fas fa-envelope"></i> Generar un envoie courrier</a>
-                <a href="{% url 'courrier_list' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-list"></i> Lista</a>
-            </div>
-            <div class="col-4 text-end">
-                <a href="{% url 'poliza_create' %}" class="btn btn-warning"><i class="fas fa-file-invoice"></i> Formulaire production</a>
-                <a href="{% url 'sinistro_create' %}" class="btn btn-secondary"><i class="fas fa-car-crash"></i> Formulaire sinistre</a>
-            </div>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover" id="tablaPolizas">
-                <thead>
-                    <tr>
-                        <th class="no-sort" style="width:1%"><input type="checkbox" id="checkTodos" class="form-check-input" title="Seleccionar todo"></th>
-                        <th>Recibo</th>
-                        <th>Fecha</th>
-                        <th>Tipo</th>
-                        <th>Póliza</th>
-                        <th>Matrícula</th>
-                        <th>Asegurado</th>
-                        <th>Total</th>
-                        <th>Resto</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-             <tbody>
-             </tbody>
-            </table>
-        </div>
+  </div>
+  <div class="card-body">
+    <form method="get" class="row mb-3 g-2 align-items-end">
+      <div class="col-auto">
+        <label class="form-label mb-0">Date du</label>
+        <input
+          type="date"
+          class="form-control"
+          name="fecha_desde"
+          value="{{ fecha_desde }}"
+        />
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-0">Date au</label>
+        <input
+          type="date"
+          class="form-control"
+          name="fecha_hasta"
+          value="{{ fecha_hasta }}"
+        />
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-0">Buscar</label>
+        <input
+          type="text"
+          class="form-control"
+          name="q"
+          value="{{ q }}"
+          placeholder="Póliza, asegurado, matrícula..."
+        />
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-search"></i> Buscar
+        </button>
+      </div>
+      {% if filtrando_fechas or q %}
+      <div class="col-auto">
+        <a href="{% url 'poliza_list' %}" class="btn btn-outline-secondary"
+          >Tous</a
+        >
+      </div>
+      {% endif %}
+      <div class="col-auto">
+        <a
+          href="{% url 'export_polizas_excel' %}?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}"
+          class="btn btn-info"
+          ><i class="fas fa-file-excel"></i> Excel (filtre)</a
+        >
+      </div>
+    </form>
+    <div class="row mb-3">
+      <div class="col-8">
+        <a href="{% url 'envio_banco_create' %}" class="btn btn-warning"
+          ><i class="fas fa-exchange-alt"></i> Generar un virement</a
+        >
+        <a
+          href="{% url 'envio_banco_list' %}"
+          class="btn btn-outline-warning btn-sm"
+          ><i class="fas fa-list"></i> Lista</a
+        >
+        <a href="{% url 'courrier_create' %}" class="btn btn-primary"
+          ><i class="fas fa-envelope"></i> Generar un envoie courrier</a
+        >
+        <a
+          href="{% url 'courrier_list' %}"
+          class="btn btn-outline-primary btn-sm"
+          ><i class="fas fa-list"></i> Lista</a
+        >
+      </div>
+      <div class="col-4 text-end">
+        <a href="{% url 'poliza_create' %}" class="btn btn-warning"
+          ><i class="fas fa-file-invoice"></i> Formulaire production</a
+        >
+        <a href="{% url 'sinistro_create' %}" class="btn btn-secondary"
+          ><i class="fas fa-car-crash"></i> Formulaire sinistre</a
+        >
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover" id="tablaPolizas">
+        <thead>
+          <tr>
+            <th class="no-sort" style="width: 1%">
+              <input
+                type="checkbox"
+                id="checkTodos"
+                class="form-check-input"
+                title="Seleccionar todo"
+              />
+            </th>
+            <th>Recibo</th>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Póliza</th>
+            <th>Matrícula</th>
+            <th>Asegurado</th>
+            <th>Total</th>
+            <th>Resto</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-        <div class="row mt-4">
-            <div class="col-2">
-                <a href="{% url 'backup_view' %}" class="btn btn-primary"><i class="fas fa-database"></i> Sauvegarde de securité</a>
-            </div>
-            <div class="col-2">
-                <a href="{% url 'sinistro_list' %}" class="btn btn-warning"><i class="fas fa-list"></i> La liste des sinistres</a>
-            </div>
-            <div class="col-2">
-                <a href="{% url 'export_polizas_excel' %}" class="btn btn-danger"><i class="fas fa-file-excel"></i> La liste en excel</a>
-            </div>
-            <div class="col-2">
-                <a href="{% url 'export_polizas_eliminadas_excel' %}" class="btn btn-danger"><i class="fas fa-trash"></i> La liste des eliminés</a>
-            </div>
-            <div class="col-2">
-                <a href="{% url 'poliza_create' %}" class="btn btn-success"><i class="fas fa-sign-out-alt"></i> Salir</a>
-            </div>
-        </div>
+    <div class="row mt-4">
+      <div class="col-2">
+        <a href="{% url 'backup_view' %}" class="btn btn-primary"
+          ><i class="fas fa-database"></i> Sauvegarde de securité</a
+        >
+      </div>
+      <div class="col-2">
+        <a href="{% url 'sinistro_list' %}" class="btn btn-warning"
+          ><i class="fas fa-list"></i> La liste des sinistres</a
+        >
+      </div>
+      <div class="col-2">
+        <a href="{% url 'export_polizas_excel' %}" class="btn btn-danger"
+          ><i class="fas fa-file-excel"></i> La liste en excel</a
+        >
+      </div>
+      <div class="col-2">
+        <a
+          href="{% url 'export_polizas_eliminadas_excel' %}"
+          class="btn btn-danger"
+          ><i class="fas fa-trash"></i> La liste des eliminés</a
+        >
+      </div>
+      <div class="col-2">
+        <a href="{% url 'poliza_create' %}" class="btn btn-success"
+          ><i class="fas fa-sign-out-alt"></i> Salir</a
+        >
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Modal Factures -->
-<div class="modal fade" id="modalFactures" tabindex="-1" aria-labelledby="modalFacturesLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalFacturesLabel">Sélectionner un client pour imprimer ses factures</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="table-responsive">
-                    <table class="table table-hover" id="laListaClientesF">
-                        <thead>
-                            <tr>
-                                <th scope="col">CODE CLIENT</th>
-                                <th scope="col">NOM ASSURÉ</th>
-                                <th scope="col">STATUT</th>
-                                <th scope="col">ACTIONS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                    </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-            </div>
+<div
+  class="modal fade"
+  id="modalFactures"
+  tabindex="-1"
+  aria-labelledby="modalFacturesLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalFacturesLabel">
+          Sélectionner un client pour imprimer ses factures
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-hover" id="laListaClientesF">
+            <thead>
+              <tr>
+                <th scope="col">CODE CLIENT</th>
+                <th scope="col">NOM ASSURÉ</th>
+                <th scope="col">STATUT</th>
+                <th scope="col">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Fermer
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Modal Relevés -->
-<div class="modal fade" id="modalReleves" tabindex="-1" aria-labelledby="modalRelevesLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalRelevesLabel">Sélectionner un client pour imprimer ses relevés</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="table-responsive">
-                    <table class="table table-hover" id="laListaClientesR">
-                        <thead>
-                            <tr>
-                                <th scope="col">CODE CLIENT</th>
-                                <th scope="col">NOM ASSURÉ</th>
-                                <th scope="col">STATUT</th>
-                                <th scope="col">ACTIONS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                    </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-            </div>
+<div
+  class="modal fade"
+  id="modalReleves"
+  tabindex="-1"
+  aria-labelledby="modalRelevesLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalRelevesLabel">
+          Sélectionner un client pour imprimer ses relevés
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-hover" id="laListaClientesR">
+            <thead>
+              <tr>
+                <th scope="col">CODE CLIENT</th>
+                <th scope="col">NOM ASSURÉ</th>
+                <th scope="col">STATUT</th>
+                <th scope="col">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Fermer
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
-{% endblock %}
-{% block extra_js %}
+{% endblock %} {% block extra_js %}
 <script>
-    var tablaPolizas = $('#tablaPolizas').DataTable({
-        language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: "{% url 'poliza_datatables_data' %}",
-            dataSrc: 'data',
-            data: function (d) {
-                d.q = '{{ q }}';
-                d.fecha_desde = '{{ fecha_desde }}';
-                d.fecha_hasta = '{{ fecha_hasta }}';
-                d.con_docs = '{{ filtrando_docs|yesno:"1," }}';
-            }
+  var tablaPolizas = $("#tablaPolizas").DataTable({
+    language: {
+      url: "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json",
+    },
+    processing: true,
+    serverSide: true,
+    ajax: {
+      url: "{% url 'poliza_datatables_data' %}",
+      dataSrc: "data",
+      data: function (d) {
+        d.q = "{{ q }}";
+        d.fecha_desde = "{{ fecha_desde }}";
+        d.fecha_hasta = "{{ fecha_hasta }}";
+        d.con_docs = '{{ filtrando_docs|yesno:"1," }}';
+      },
+    },
+    columns: [
+      {
+        data: "recu",
+        className: "text-center",
+        orderable: false,
+        render: function (data, type) {
+          if (type === "display")
+            return (
+              '<input type="checkbox" class="form-check-input check-poliza" value="' +
+              data +
+              '">'
+            );
+          return data;
         },
-        columns: [
-            { data: 'recu', className: 'text-center', orderable: false,
-              render: function(data, type) {
-                  if (type === 'display') return '<input type="checkbox" class="form-check-input check-poliza" value="' + data + '">';
-                  return data;
-              } },
-            { data: 'recu', render: function(data, type, row) {
-                if (type === 'display') {
-                    var badge = row.docs > 0 ? '<span class="badge bg-info" title="' + row.docs + ' documento(s) adjunto(s)"><i class="fas fa-paperclip"></i> ' + row.docs + '</span> ' : '';
-                    return badge + '<a href="' + row.detalle + '">' + data + '</a>';
-                }
-                return data;
-            } },
-            { data: 'fecha_hoy' },
-            { data: 'letype' },
-            { data: 'police' },
-            { data: 'matricule' },
-            { data: 'assure' },
-            { data: 'totale' },
-            { data: 'reste' },
-            { data: 'acciones', className: 'text-nowrap', orderable: false }
-        ],
-        lengthMenu: [5, 10, 25, 50, 100],
-        pageLength: 5,
-        ordering: true,
-        order: [[1, 'desc']],
-        columnDefs: [
-            { orderable: false, targets: [0, 9] },
-            {
-                targets: 1,
-                render: function(data, type) {
-                    if (type === 'sort' || type === 'type') {
-                        return parseInt(data.replace(/[^0-9]/g, '')) || 0;
-                    }
-                    return data;
-                }
-            }
-        ]
+      },
+      {
+        data: "recu",
+        render: function (data, type, row) {
+          if (type === "display") {
+            var badge =
+              row.docs > 0
+                ? '<span class="badge bg-info" title="' +
+                  row.docs +
+                  ' documento(s) adjunto(s)"><i class="fas fa-paperclip"></i> ' +
+                  row.docs +
+                  "</span> "
+                : "";
+            return badge + '<a href="' + row.detalle + '">' + data + "</a>";
+          }
+          return data;
+        },
+      },
+      { data: "fecha_hoy" },
+      { data: "letype" },
+      { data: "police" },
+      { data: "matricule" },
+      { data: "assure" },
+      { data: "totale" },
+      { data: "reste" },
+      { data: "acciones", className: "text-nowrap", orderable: false },
+    ],
+    lengthMenu: [5, 10, 25, 50, 100],
+    pageLength: 5,
+    ordering: true,
+    order: [[1, "desc"]],
+    columnDefs: [
+      { orderable: false, targets: [0, 9] },
+      {
+        targets: 1,
+        render: function (data, type) {
+          if (type === "sort" || type === "type") {
+            return parseInt(data.replace(/[^0-9]/g, "")) || 0;
+          }
+          return data;
+        },
+      },
+    ],
+  });
+
+  function actualizarSeleccion() {
+    var total = tablaPolizas.$("input.check-poliza").length;
+    var marcados = tablaPolizas.$("input.check-poliza:checked").length;
+    document.getElementById("contadorSel").textContent = marcados;
+    document.getElementById("btnEliminarSeleccion").disabled = marcados === 0;
+    var checkTodos = document.getElementById("checkTodos");
+    checkTodos.checked = marcados > 0 && marcados === total;
+    checkTodos.indeterminate = marcados > 0 && marcados < total;
+  }
+
+  document.getElementById("checkTodos").addEventListener("change", function () {
+    var marcar = this.checked;
+    tablaPolizas.$("input.check-poliza").prop("checked", marcar);
+    actualizarSeleccion();
+  });
+
+  $("#tablaPolizas").on("change", "input.check-poliza", function () {
+    actualizarSeleccion();
+  });
+
+  document
+    .getElementById("btnEliminarSeleccion")
+    .addEventListener("click", function () {
+      var seleccionados = [];
+      tablaPolizas.$("input.check-poliza:checked").each(function () {
+        seleccionados.push(this.value);
+      });
+      if (seleccionados.length === 0) return;
+      Swal.fire({
+        title: "¿Eliminar " + seleccionados.length + " póliza(s)?",
+        text: "Esta acción las moverá a la lista de eliminadas",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          var form = document.createElement("form");
+          form.method = "POST";
+          form.action = '{% url "poliza_list_delete" %}';
+          var csrf = document.createElement("input");
+          csrf.type = "hidden";
+          csrf.name = "csrfmiddlewaretoken";
+          csrf.value = "{{ csrf_token }}";
+          form.appendChild(csrf);
+          seleccionados.forEach(function (recu) {
+            var input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "pk";
+            input.value = recu;
+            form.appendChild(input);
+          });
+          document.body.appendChild(form);
+          form.submit();
+        }
+      });
     });
 
-    function actualizarSeleccion() {
-        var total = tablaPolizas.$('input.check-poliza').length;
-        var marcados = tablaPolizas.$('input.check-poliza:checked').length;
-        document.getElementById('contadorSel').textContent = marcados;
-        document.getElementById('btnEliminarSeleccion').disabled = (marcados === 0);
-        var checkTodos = document.getElementById('checkTodos');
-        checkTodos.checked = (marcados > 0 && marcados === total);
-        checkTodos.indeterminate = (marcados > 0 && marcados < total);
-    }
+  // Cliente list tables are populated on-demand via AJAX to avoid loading
+  // all clientes on the initial page render.
+  // CORRECTO:
+  var urlFacturaList = "{% url 'invoice_list_by_client' 999999 %}";
+  var urlFacturaPdf = "{% url 'invoice_by_client' 999999 %}";
+  var urlReleveList = "{% url 'statement_list_by_client' 999999 %}";
+  var urlRelevePdf = "{% url 'statement_by_client' 999999 %}";
 
-    document.getElementById('checkTodos').addEventListener('change', function () {
-        var marcar = this.checked;
-        tablaPolizas.$('input.check-poliza').prop('checked', marcar);
-        actualizarSeleccion();
+  function renderClientes(rows, accionesHtml) {
+    return rows
+      .map(function (c) {
+        var statut = c.has_poliza
+          ? '<span class="badge bg-success">Facture</span> <span class="badge bg-success">Relevé</span>'
+          : '<span class="badge bg-secondary">Aucun</span>';
+        return (
+          "<tr>" +
+          "<td>" +
+          c.code +
+          "</td>" +
+          '<td class="nom-client">' +
+          c.nom +
+          "</td>" +
+          "<td>" +
+          statut +
+          "</td>" +
+          "<td>" +
+          accionesHtml(c.code) +
+          "</td>" +
+          "</tr>"
+        );
+      })
+      .join("");
+  }
+
+  function cargarClientesEnModal(dtTabla, accionesHtml) {
+    dtTabla.clear().draw("loading");
+    fetch("{% url 'get_clientes_json' %}")
+      .then(function (resp) {
+        return resp.json();
+      })
+      .then(function (data) {
+        dtTabla.clear();
+        if (!data.length) {
+          dtTabla.rows.add(
+            $('<tr><td colspan="4" class="text-center">Aucun client</td></tr>')
+          );
+        } else {
+          dtTabla.rows.add($(renderClientes(data, accionesHtml)));
+        }
+        dtTabla.draw();
+      })
+      .catch(function () {
+        dtTabla.clear();
+        dtTabla.rows.add(
+          $(
+            '<tr><td colspan="4" class="text-center text-danger">Erreur de chargement</td></tr>'
+          )
+        );
+        dtTabla.draw();
+      });
+  }
+
+  var tablaClientesF = $("#laListaClientesF").DataTable({
+    language: {
+      url: "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json",
+    },
+    pageLength: 5,
+    lengthMenu: [5, 10, 25, 50],
+    order: [[0, "asc"]],
+    searching: true,
+    paging: true,
+    info: true,
+  });
+  var tablaClientesR = $("#laListaClientesR").DataTable({
+    language: {
+      url: "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json",
+    },
+    pageLength: 5,
+    lengthMenu: [5, 10, 25, 50],
+    order: [[0, "asc"]],
+    searching: true,
+    paging: true,
+    info: true,
+  });
+
+  $("#modalFactures").on("show.bs.modal", function () {
+    cargarClientesEnModal(tablaClientesF, function (code) {
+      return (
+        '<a class="btn btn-sm btn-secondary" href="' +
+        urlFacturaList.replace("999999", code) +
+        '"><i class="fas fa-file-invoice"></i> Factures</a> ' +
+        '<a class="btn btn-sm btn-danger" href="' +
+        urlFacturaPdf.replace("999999", code) +
+        '"><i class="fas fa-file-pdf"></i> PDF</a>'
+      );
     });
+  });
 
-    $('#tablaPolizas').on('change', 'input.check-poliza', function () {
-        actualizarSeleccion();
+  $("#modalReleves").on("show.bs.modal", function () {
+    cargarClientesEnModal(tablaClientesR, function (code) {
+      return (
+        '<a class="btn btn-sm btn-warning" href="' +
+        urlReleveList.replace("999999", code) +
+        '"><i class="fas fa-file-excel"></i> Relevés</a> ' +
+        '<a class="btn btn-sm btn-warning" href="' +
+        urlRelevePdf.replace("999999", code) +
+        '"><i class="fas fa-file-pdf"></i> PDF</a>'
+      );
     });
+  });
 
-    document.getElementById('btnEliminarSeleccion').addEventListener('click', function () {
-        var seleccionados = [];
-        tablaPolizas.$('input.check-poliza:checked').each(function () {
-            seleccionados.push(this.value);
-        });
-        if (seleccionados.length === 0) return;
-        Swal.fire({
-            title: '¿Eliminar ' + seleccionados.length + ' póliza(s)?',
-            text: 'Esta acción las moverá a la lista de eliminadas',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                var form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '{% url "poliza_list_delete" %}';
-                var csrf = document.createElement('input');
-                csrf.type = 'hidden';
-                csrf.name = 'csrfmiddlewaretoken';
-                csrf.value = '{{ csrf_token }}';
-                form.appendChild(csrf);
-                seleccionados.forEach(function (recu) {
-                    var input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'pk';
-                    input.value = recu;
-                    form.appendChild(input);
-                });
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
+  if (window.location.hash === "#factures") {
+    var mf = new bootstrap.Modal(document.getElementById("modalFactures"));
+    mf.show();
+  } else if (window.location.hash === "#releves") {
+    var mr = new bootstrap.Modal(document.getElementById("modalReleves"));
+    mr.show();
+  }
+  function confirmarEliminar(recu) {
+    Swal.fire({
+      title: "¿Eliminar póliza?",
+      text: "Esta acción moverá la póliza a la lista de eliminadas",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        var form = document.createElement("form");
+        form.method = "POST";
+        form.action = '{% url "poliza_list_delete" %}';
+        var csrf = document.createElement("input");
+        csrf.type = "hidden";
+        csrf.name = "csrfmiddlewaretoken";
+        csrf.value = "{{ csrf_token }}";
+        form.appendChild(csrf);
+        var input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "pk";
+        input.value = recu;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+      }
     });
-
-    // Cliente list tables are populated on-demand via AJAX to avoid loading
-    // all clientes on the initial page render.
-    var urlFacturaList = "{% url 'invoice_list_by_client' 0 %}".replace(/0$/, '');
-    var urlFacturaPdf = "{% url 'invoice_by_client' 0 %}".replace(/0$/, '');
-    var urlReleveList = "{% url 'statement_list_by_client' 0 %}".replace(/0$/, '');
-    var urlRelevePdf = "{% url 'statement_by_client' 0 %}".replace(/0$/, '');
-
-    function renderClientes(rows, accionesHtml) {
-        return rows.map(function (c) {
-            var statut = c.has_poliza
-                ? '<span class="badge bg-success">Facture</span> <span class="badge bg-success">Relevé</span>'
-                : '<span class="badge bg-secondary">Aucun</span>';
-            return '<tr>' +
-                '<td>' + c.code + '</td>' +
-                '<td class="nom-client">' + c.nom + '</td>' +
-                '<td>' + statut + '</td>' +
-                '<td>' + accionesHtml(c.code) + '</td>' +
-                '</tr>';
-        }).join('');
-    }
-
-    function cargarClientesEnModal(dtTabla, accionesHtml) {
-        dtTabla.clear().draw('loading');
-        fetch("{% url 'get_clientes_json' %}")
-            .then(function (resp) { return resp.json(); })
-            .then(function (data) {
-                dtTabla.clear();
-                if (!data.length) {
-                    dtTabla.rows.add($(
-                        '<tr><td colspan="4" class="text-center">Aucun client</td></tr>'
-                    ));
-                } else {
-                    dtTabla.rows.add($(renderClientes(data, accionesHtml)));
-                }
-                dtTabla.draw();
-            })
-            .catch(function () {
-                dtTabla.clear();
-                dtTabla.rows.add($(
-                    '<tr><td colspan="4" class="text-center text-danger">Erreur de chargement</td></tr>'
-                ));
-                dtTabla.draw();
-            });
-    }
-
-    var tablaClientesF = $('#laListaClientesF').DataTable({
-        language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
-        pageLength: 5,
-        lengthMenu: [5, 10, 25, 50],
-        order: [[0, 'asc']],
-        searching: true,
-        paging: true,
-        info: true
-    });
-    var tablaClientesR = $('#laListaClientesR').DataTable({
-        language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
-        pageLength: 5,
-        lengthMenu: [5, 10, 25, 50],
-        order: [[0, 'asc']],
-        searching: true,
-        paging: true,
-        info: true
-    });
-
-    $('#modalFactures').on('show.bs.modal', function () {
-        cargarClientesEnModal(tablaClientesF, function (code) {
-            return '<a class="btn btn-sm btn-secondary" href="' + urlFacturaList + code + '"><i class="fas fa-file-invoice"></i> Factures</a> ' +
-                   '<a class="btn btn-sm btn-danger" href="' + urlFacturaPdf + code + '"><i class="fas fa-file-pdf"></i> PDF</a>';
-        });
-    });
-    $('#modalReleves').on('show.bs.modal', function () {
-        cargarClientesEnModal(tablaClientesR, function (code) {
-            return '<a class="btn btn-sm btn-warning" href="' + urlReleveList + code + '"><i class="fas fa-file-excel"></i> Relevés</a> ' +
-                   '<a class="btn btn-sm btn-warning" href="' + urlRelevePdf + code + '"><i class="fas fa-file-pdf"></i> PDF</a>';
-        });
-    });
-
-    if (window.location.hash === '#factures') {
-        var mf = new bootstrap.Modal(document.getElementById('modalFactures'));
-        mf.show();
-    } else if (window.location.hash === '#releves') {
-        var mr = new bootstrap.Modal(document.getElementById('modalReleves'));
-        mr.show();
-    }
-    function confirmarEliminar(recu) {
-        Swal.fire({
-            title: '¿Eliminar póliza?',
-            text: 'Esta acción moverá la póliza a la lista de eliminadas',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                var form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '{% url "poliza_list_delete" %}';
-                var csrf = document.createElement('input');
-                csrf.type = 'hidden';
-                csrf.name = 'csrfmiddlewaretoken';
-                csrf.value = '{{ csrf_token }}';
-                form.appendChild(csrf);
-                var input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'pk';
-                input.value = recu;
-                form.appendChild(input);
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
-    }
+  }
 </script>
 {% endblock %}
