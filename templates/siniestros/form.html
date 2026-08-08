@@ -11,9 +11,9 @@
     </div>
     <div class="card-body">
         <div class="row">
-            <div class="col-md-3"><label>Code Sinistre:</label><input type="text" class="form-control" name="code_sinistre" value="{{ val.code_sinistre }}"></div>
+            <div class="col-md-3"><label>Code Sinistre:</label><input type="text" class="form-control" name="code_sinistre" id="code_sinistre" value="{{ val.code_sinistre }}"></div>
             <div class="col-md-3"><label>Réf Sinistre:</label><input type="text" class="form-control" name="ref_sinistre" value="{{ val.ref_sinistre }}"></div>
-            <div class="col-md-2"><label>Cod correcto:</label><select class="form-select" name="cod_sig_correcto"><option value="0"{% if val.cod_sig_correcto == '0' %} selected{% endif %}>No</option><option value="1"{% if val.cod_sig_correcto == '1' %} selected{% endif %}>Sí</option></select></div>
+            <input type="hidden" id="cod_sig_correcto" name="cod_sig_correcto" value="{{ val.cod_sig_correcto }}">
             <div class="col-md-2 d-flex align-items-center gap-2"><label class="form-check-label mb-0">Completo:</label><input type="checkbox" class="form-check-input" name="completo" value="1"{% if val.completo %} checked{% endif %}></div>
         </div>
         <div class="row mt-3">
@@ -31,7 +31,7 @@
                 </div>
             </div>
             <div class="col-md-3"><label>Assuré:</label><input type="text" class="form-control" name="assure" id="id_assure" value="{{ val.assure }}" readonly></div>
-            <div class="col-md-3"><label>Catégorie:</label><input type="text" class="form-control" name="categorie_assurance" value="{{ val.categorie_assurance }}"></div>
+            <div class="col-md-3"><label>Catégorie:</label><input type="text" class="form-control" name="categorie_assurance" id="id_categorie_assurance" value="{{ val.categorie_assurance }}"></div>
         </div>
         <div class="row mt-3">
             <div class="col-md-4">
@@ -42,7 +42,7 @@
                     <option value="SANAD"{% if val.reference_assurance == 'SANAD' %} selected{% endif %}>SANAD</option>
                 </select>
             </div>
-            <div class="col-md-4"><label>Bénéficiaire:</label><input type="text" class="form-control" name="benificiaire" value="{{ val.benificiaire }}"></div>
+            <div class="col-md-4"><label>Bénéficiaire:</label><input type="text" class="form-control" name="benificiaire" id="id_benificiaire" value="{{ val.benificiaire }}"></div>
             <div class="col-md-4"><label>Réf. Assistance:</label><input type="text" class="form-control" name="reference_assistance" value="{{ val.reference_assistance }}"></div>
         </div>
         <div class="row mt-3">
@@ -145,16 +145,18 @@ function cargarPolizas(q) {
             let html = '';
             data.forEach(p => {
                 html += '<tr><td>' + p.recu + '</td><td>' + p.police + '</td><td>' + p.assure + '</td><td>' + p.marque + '</td><td>' + p.matricule +
-                    '</td><td><button type="button" class="btn btn-sm btn-success" onclick="seleccionarPoliza(' + p.recu + ',\'' + p.police.replace(/'/g,"\\'") + '\',\'' + p.assure.replace(/'/g,"\\'") + '\')">Sel.</button></td></tr>';
+                    '</td><td><button type="button" class="btn btn-sm btn-success" onclick="seleccionarPoliza(' + p.recu + ',\'' + p.police.replace(/'/g,"\\'") + '\',\'' + p.assure.replace(/'/g,"\\'") + '\',\'' + p.produit.replace(/'/g,"\\'") + '\')">Sel.</button></td></tr>';
             });
             document.getElementById('tablaPolizasBody').innerHTML = html || '<tr><td colspan="6" class="text-center">Sin resultados</td></tr>';
         });
 }
 
-function seleccionarPoliza(recu, police, assure) {
+function seleccionarPoliza(recu, police, assure, produit) {
     document.getElementById('id_recu').value = recu;
     document.getElementById('id_police').value = police;
     document.getElementById('id_assure').value = assure;
+    document.getElementById('id_categorie_assurance').value = produit || '';
+    document.getElementById('id_benificiaire').value = assure;
     bootstrap.Modal.getInstance(document.getElementById('modalPolizas')).hide();
 }
 
@@ -218,6 +220,10 @@ function eliminarFilaDocSiniestro(btn) {
     if (container.querySelectorAll('.fila-doc-siniestro').length > 1) btn.closest('.fila-doc-siniestro').remove();
     else alert('Debes dejar al menos una categoría.');
 }
+
+document.getElementById('code_sinistre').addEventListener('change', function() {
+    document.getElementById('cod_sig_correcto').value = '1';
+});
 
 cargarPolizas('');
 </script>
