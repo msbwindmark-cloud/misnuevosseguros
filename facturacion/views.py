@@ -383,9 +383,9 @@ def _quittance_excel(poliza, prefix="F"):
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
-    label_font = Font(name='Calibri', bold=True, size=10)
-    normal_font = Font(name='Calibri', size=10)
-    bold_font = Font(name='Calibri', bold=True, size=10)
+    label_font = Font(name='Calibri', bold=True, size=14)
+    normal_font = Font(name='Calibri', size=14)
+    bold_font = Font(name='Calibri', bold=True, size=14)
     title_font = Font(name='Calibri', bold=True, size=14)
     center = Alignment(horizontal='center', vertical='center')
     right_align = Alignment(horizontal='right', vertical='center')
@@ -402,7 +402,7 @@ def _quittance_excel(poliza, prefix="F"):
     header_row = 22
     for col, h in enumerate(headers, 1):
         c = ws.cell(row=header_row, column=col, value=h)
-        c.font = Font(name='Calibri', bold=True, size=10)
+        c.font = Font(name='Calibri', bold=True, size=14)
         c.border = thin_border
         c.alignment = center
 
@@ -617,21 +617,21 @@ def invoice_list_by_client(request, client_id):
 
         ws.merge_cells('A1:H1')
         ws['A1'] = f'Rabat, le : {fecha_str}'
-        ws['A1'].font = Font(name='Calibri', size=10)
+        ws['A1'].font = Font(name='Calibri', size=14)
         ws.merge_cells('A3:H3')
         ws['A3'] = cliente_nom
-        ws['A3'].font = Font(name='Calibri', bold=True, size=10)
+        ws['A3'].font = Font(name='Calibri', bold=True, size=14)
         ws.merge_cells('A5:H5')
         ws['A5'] = cliente_adresse
-        ws['A5'].font = Font(name='Calibri', size=10)
+        ws['A5'].font = Font(name='Calibri', size=14)
         ws.merge_cells('A7:H7')
         ws['A7'] = f'FACTURE  N\u00ba: {facture_num}'
-        ws['A7'].font = Font(name='Calibri', bold=True, size=12)
+        ws['A7'].font = Font(name='Calibri', bold=True, size=14)
 
         header_row = 9
         headers = ['N\u00b0 Police', 'P\u00e9riode', 'D\u00e9signation', 'Prime Nette', 'Taxes', 'T.P', 'Accessoires', 'Total TTC']
         header_fill = PatternFill(start_color='0D6EFD', end_color='0D6EFD', fill_type='solid')
-        header_font = Font(name='Calibri', bold=True, size=10, color='FFFFFF')
+        header_font = Font(name='Calibri', bold=True, size=14, color='FFFFFF')
         for col, h in enumerate(headers, 1):
             c = ws.cell(row=header_row, column=col, value=h)
             c.font = header_font
@@ -712,21 +712,21 @@ def statement_list_by_client(request, client_id):
 
         ws.merge_cells('A1:H1')
         ws['A1'] = f'Rabat, le : {fecha_str}'
-        ws['A1'].font = Font(name='Calibri', size=10)
+        ws['A1'].font = Font(name='Calibri', size=14)
         ws.merge_cells('A3:H3')
         ws['A3'] = cliente_nom
-        ws['A3'].font = Font(name='Calibri', bold=True, size=10)
+        ws['A3'].font = Font(name='Calibri', bold=True, size=14)
         ws.merge_cells('A5:H5')
         ws['A5'] = cliente_adresse
-        ws['A5'].font = Font(name='Calibri', size=10)
+        ws['A5'].font = Font(name='Calibri', size=14)
         ws.merge_cells('A7:H7')
         ws['A7'] = f'RELEVÉ  N\u00ba: {releve_num}'
-        ws['A7'].font = Font(name='Calibri', bold=True, size=12)
+        ws['A7'].font = Font(name='Calibri', bold=True, size=14)
 
         header_row = 9
         headers = ['N\u00b0 Police', 'P\u00e9riode', 'D\u00e9signation', 'Prime Nette', 'Taxes', 'T.P', 'Accessoires', 'Total TTC']
         header_fill = PatternFill(start_color='198754', end_color='198754', fill_type='solid')
-        header_font = Font(name='Calibri', bold=True, size=10, color='FFFFFF')
+        header_font = Font(name='Calibri', bold=True, size=14, color='FFFFFF')
         for col, h in enumerate(headers, 1):
             c = ws.cell(row=header_row, column=col, value=h)
             c.font = header_font

@@ -228,7 +228,7 @@
             .replace(/á/g, '&aacute;').replace(/é/g, '&eacute;')
             .replace(/í/g, '&iacute;').replace(/ó/g, '&oacute;')
             .replace(/ú/g, '&uacute;').replace(/º/g, '&ordm;');
-        var template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"><head></head><body><table>' + innerHtml + '</table></body></html>';
+        var template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"><head><style>td, th, table { font-family: Calibri; font-size: 14pt; }</style></head><body><table>' + innerHtml + '</table></body></html>';
         var blob = new Blob([template], { type: 'application/vnd.ms-excel;charset=utf-8' });
         var link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
