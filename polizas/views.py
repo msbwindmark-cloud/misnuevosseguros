@@ -56,11 +56,6 @@ class PolizaListView(ListView):
         ctx['fecha_desde'] = self.request.GET.get('fecha_desde', '')
         ctx['fecha_hasta'] = self.request.GET.get('fecha_hasta', '')
         ctx['filtando_fechas'] = bool(self.request.GET.get('fecha_desde') or self.request.GET.get('fecha_hasta'))
-        ctx['clientes'] = Cliente.objects.all().order_by('code_client')
-        ctx['clientes_con_poliza'] = set(
-            str(c) for c in Poliza.objects.exclude(code_client='')
-            .values_list('code_client', flat=True).distinct()
-        )
         return ctx
 
 
@@ -337,8 +332,13 @@ def get_clientes_json(request):
     if q:
         clientes = clientes.filter(nom_client__icontains=q) | clientes.filter(code_client__icontains=q)
     clientes = clientes.order_by('code_client')[:100]
+    poliza_codes = set(
+        str(c) for c in Poliza.objects.exclude(code_client='')
+        .values_list('code_client', flat=True).distinct()
+    )
     data = [{'id': c.pk, 'code': str(c.code_client), 'nom': str(c.nom_client),
-             'tel': str(c.telephone_client or ''), 'email': str(c.email_client or '')} for c in clientes]
+             'tel': str(c.telephone_client or ''), 'email': str(c.email_client or ''),
+             'has_poliza': str(c.code_client) in poliza_codes} for c in clientes]
     return JsonResponse(data, safe=False)
 
 

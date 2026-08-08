@@ -10,6 +10,7 @@
             <a href="{% url 'poliza_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nueva</a>
             <a href="{% url 'export_polizas_pdf' %}" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a>
             <a href="{% url 'export_polizas_excel' %}" class="btn btn-info btn-sm"><i class="fas fa-file-excel"></i> Excel</a>
+            <a href="{% url 'sinistro_list' %}" class="btn btn-warning btn-sm"><i class="fas fa-list"></i> Listado de Siniestros</a>
             <a href="{% url 'poliza_create' %}" class="btn btn-light btn-sm"><i class="fas fa-arrow-left"></i> Formulaire</a>
             <a href="{% url 'export_polizas_eliminadas_excel' %}" class="btn btn-outline-light btn-sm"><i class="fas fa-trash"></i> Eliminadas</a>
             <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalFactures"><i class="fas fa-file-invoice"></i> Factures</button>
@@ -75,9 +76,8 @@
                         <th>Acciones</th>
                     </tr>
                 </thead>
-            <tbody>
-                <tr><td colspan="10" class="text-center">Cargando...</td></tr>
-            </tbody>
+             <tbody>
+             </tbody>
             </table>
         </div>
 
@@ -121,27 +121,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for c in clientes %}
-                            <tr>
-                                <td>{{ c.code_client }}</td>
-                                <td class="nom-client">{{ c.nom_client }}</td>
-                                <td>
-                                    {% if c.code_client|stringformat:"s" in clientes_con_poliza %}
-                                        <span class="badge bg-success">Facture</span>
-                                        <span class="badge bg-success">Relevé</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">Aucun</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a class="btn btn-sm btn-secondary" href="{% url 'invoice_list_by_client' c.code_client %}"><i class="fas fa-file-invoice"></i> Factures</a>
-                                    <a class="btn btn-sm btn-danger" href="{% url 'invoice_by_client' c.code_client %}"><i class="fas fa-file-pdf"></i> PDF</a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="3" class="text-center">Aucun client</td></tr>
-                            {% endfor %}
-                        </tbody>
+                    </tbody>
                     </table>
                 </div>
             </div>
@@ -172,27 +152,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for c in clientes %}
-                            <tr>
-                                <td>{{ c.code_client }}</td>
-                                <td class="nom-client">{{ c.nom_client }}</td>
-                                <td>
-                                    {% if c.code_client|stringformat:"s" in clientes_con_poliza %}
-                                        <span class="badge bg-success">Facture</span>
-                                        <span class="badge bg-success">Relevé</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">Aucun</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a class="btn btn-sm btn-warning" href="{% url 'statement_list_by_client' c.code_client %}"><i class="fas fa-file-excel"></i> Relevés</a>
-                                    <a class="btn btn-sm btn-warning" href="{% url 'statement_by_client' c.code_client %}"><i class="fas fa-file-pdf"></i> PDF</a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="3" class="text-center">Aucun client</td></tr>
-                            {% endfor %}
-                        </tbody>
+                    </tbody>
                     </table>
                 </div>
             </div>
@@ -318,6 +278,51 @@
         });
     });
 
+    // Cliente list tables are populated on-demand via AJAX to avoid loading
+    // all clientes on the initial page render.
+    var urlFacturaList = "{% url 'invoice_list_by_client' 0 %}".replace(/0$/, '');
+    var urlFacturaPdf = "{% url 'invoice_by_client' 0 %}".replace(/0$/, '');
+    var urlReleveList = "{% url 'statement_list_by_client' 0 %}".replace(/0$/, '');
+    var urlRelevePdf = "{% url 'statement_by_client' 0 %}".replace(/0$/, '');
+
+    function renderClientes(rows, accionesHtml) {
+        return rows.map(function (c) {
+            var statut = c.has_poliza
+                ? '<span class="badge bg-success">Facture</span> <span class="badge bg-success">Relevé</span>'
+                : '<span class="badge bg-secondary">Aucun</span>';
+            return '<tr>' +
+                '<td>' + c.code + '</td>' +
+                '<td class="nom-client">' + c.nom + '</td>' +
+                '<td>' + statut + '</td>' +
+                '<td>' + accionesHtml(c.code) + '</td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    function cargarClientesEnModal(dtTabla, accionesHtml) {
+        dtTabla.clear().draw('loading');
+        fetch("{% url 'get_clientes_json' %}")
+            .then(function (resp) { return resp.json(); })
+            .then(function (data) {
+                dtTabla.clear();
+                if (!data.length) {
+                    dtTabla.rows.add($(
+                        '<tr><td colspan="4" class="text-center">Aucun client</td></tr>'
+                    ));
+                } else {
+                    dtTabla.rows.add($(renderClientes(data, accionesHtml)));
+                }
+                dtTabla.draw();
+            })
+            .catch(function () {
+                dtTabla.clear();
+                dtTabla.rows.add($(
+                    '<tr><td colspan="4" class="text-center text-danger">Erreur de chargement</td></tr>'
+                ));
+                dtTabla.draw();
+            });
+    }
+
     var tablaClientesF = $('#laListaClientesF').DataTable({
         language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
         pageLength: 5,
@@ -336,6 +341,20 @@
         paging: true,
         info: true
     });
+
+    $('#modalFactures').on('show.bs.modal', function () {
+        cargarClientesEnModal(tablaClientesF, function (code) {
+            return '<a class="btn btn-sm btn-secondary" href="' + urlFacturaList + code + '"><i class="fas fa-file-invoice"></i> Factures</a> ' +
+                   '<a class="btn btn-sm btn-danger" href="' + urlFacturaPdf + code + '"><i class="fas fa-file-pdf"></i> PDF</a>';
+        });
+    });
+    $('#modalReleves').on('show.bs.modal', function () {
+        cargarClientesEnModal(tablaClientesR, function (code) {
+            return '<a class="btn btn-sm btn-warning" href="' + urlReleveList + code + '"><i class="fas fa-file-excel"></i> Relevés</a> ' +
+                   '<a class="btn btn-sm btn-warning" href="' + urlRelevePdf + code + '"><i class="fas fa-file-pdf"></i> PDF</a>';
+        });
+    });
+
     if (window.location.hash === '#factures') {
         var mf = new bootstrap.Modal(document.getElementById('modalFactures'));
         mf.show();

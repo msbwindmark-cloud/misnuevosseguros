@@ -10,6 +10,7 @@
             <a href="{% url 'sinistro_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Nuevo Siniestro</a>
             <a href="{% url 'sinistro_list_pdf' %}" class="btn btn-info btn-sm"><i class="fas fa-file-pdf"></i> PDF Lista</a>
             <a href="{% url 'sinistro_list_excel' %}" class="btn btn-secondary btn-sm"><i class="fas fa-file-excel"></i> Excel</a>
+            <a href="{% url 'poliza_list' %}" class="btn btn-warning btn-sm"><i class="fas fa-list"></i> Listado de Pólizas</a>
             <a href="{% url 'poliza_create' %}" class="btn btn-light btn-sm"><i class="fas fa-arrow-left"></i> Formulaire</a>
             {% if filtrando_docs %}
             <a href="{% url 'sinistro_list' %}" class="btn btn-info btn-sm"><i class="fas fa-times"></i> Tous</a>
