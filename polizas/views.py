@@ -392,10 +392,23 @@ def get_next_attestation(request):
     type_id = request.GET.get('type_id', '')
     if not type_id or not type_id.isdigit():
         return JsonResponse({'ok': False, 'error': 'type_id requerido'})
-    att = Attestation.objects.filter(
-        id_type_attestation_id=int(type_id),
-        seleccionado=True
+    type_id = int(type_id)
+    ultima_desactivada = Attestation.objects.filter(
+        id_type_attestation_id=type_id,
+        seleccionado=False
     ).order_by('-id').first()
+    att = None
+    if ultima_desactivada:
+        att = Attestation.objects.filter(
+            id_type_attestation_id=type_id,
+            seleccionado=True,
+            id__gt=ultima_desactivada.id,
+        ).order_by('id').first()
+    if att is None:
+        att = Attestation.objects.filter(
+            id_type_attestation_id=type_id,
+            seleccionado=True,
+        ).order_by('id').first()
     if att:
         return JsonResponse({'ok': True, 'numero': str(att.numero_attestation), 'id': att.pk})
     return JsonResponse({'ok': False, 'error': 'No hay attestations disponibles para este tipo'})
