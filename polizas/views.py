@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Count
+from django.db import IntegrityError
 from .models import Poliza, PolizaGarantia, PolizaGarantiaOption, PolizaGarantiaFranchise
 from garantias.models import Garantia, GarantiaOption, GarantiaFranchise
 from clientes.models import Cliente
@@ -338,6 +339,7 @@ def get_clientes_json(request):
     )
     data = [{'id': c.pk, 'code': str(c.code_client), 'nom': str(c.nom_client),
              'tel': str(c.telephone_client or ''), 'email': str(c.email_client or ''),
+             'address': str(c.address_client or ''),
              'has_poliza': str(c.code_client) in poliza_codes} for c in clientes]
     return JsonResponse(data, safe=False)
 
@@ -349,14 +351,19 @@ def crear_cliente_ajax(request):
         nom = request.POST.get('nom_client', '')
         tel = request.POST.get('telephone_client', '')
         email = request.POST.get('email_client', '')
+        address = request.POST.get('address_client', '')
         if not nom:
             return JsonResponse({'ok': False, 'error': 'Nombre requerido'})
-        cliente = Cliente.objects.create(
-            code_client=code or int(datetime.now().timestamp()),
-            nom_client=nom,
-            telephone_client=tel or '',
-            email_client=email or '',
-        )
+        try:
+            cliente = Cliente.objects.create(
+                code_client=code or int(datetime.now().timestamp()),
+                nom_client=nom,
+                telephone_client=tel or '',
+                email_client=email or '',
+                address_client=address or '',
+            )
+        except IntegrityError:
+            return JsonResponse({'ok': False, 'error': 'El código del cliente ya existe'})
         return JsonResponse({
             'ok': True,
             'cliente': {
@@ -365,6 +372,7 @@ def crear_cliente_ajax(request):
                 'nom': str(cliente.nom_client),
                 'tel': str(cliente.telephone_client or ''),
                 'email': str(cliente.email_client or ''),
+                'address': str(cliente.address_client or ''),
             }
         })
     return JsonResponse({'ok': False, 'error': 'Método no permitido'})

@@ -89,6 +89,7 @@ class ClienteDeleteView(DeleteView):
             nom_client=cliente.nom_client,
             telephone_client=cliente.telephone_client,
             email_client=cliente.email_client,
+            address_client=cliente.address_client,
         )
         messages.success(self.request, self.success_message)
         return super().delete(request, *args, **kwargs)
@@ -105,6 +106,7 @@ def cliente_bulk_delete(request):
                 nom_client=cliente.nom_client,
                 telephone_client=cliente.telephone_client,
                 email_client=cliente.email_client,
+                address_client=cliente.address_client,
             )
             cliente.delete()
             count += 1

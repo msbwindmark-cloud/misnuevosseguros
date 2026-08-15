@@ -276,7 +276,7 @@
     <div class="modal-header bg-dark text-white"><h5 class="modal-title">Selectionner un client</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
         <input type="text" id="searchClient" class="form-control mb-3" placeholder="Buscar por nombre o código..." oninput="cargarClientes(this.value)">
-        <div class="table-responsive" style="max-height:400px"><table class="table table-hover table-sm"><thead><tr><th>Código</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th></th></tr></thead><tbody id="tablaClientesBody"></tbody></table></div>
+        <div class="table-responsive" style="max-height:400px"><table class="table table-hover table-sm"><thead><tr><th>Código</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Adresse</th><th></th></tr></thead><tbody id="tablaClientesBody"></tbody></table></div>
     </div>
     <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button></div>
 </div></div></div>
@@ -289,6 +289,7 @@
         <div class="mb-2"><input type="text" id="new_nom_client" class="form-control" placeholder="Nom *" required></div>
         <div class="mb-2"><input type="text" id="new_telephone_client" class="form-control" placeholder="Téléphone"></div>
         <div class="mb-2"><input type="text" id="new_email_client" class="form-control" placeholder="Email"></div>
+        <div class="mb-2"><input type="text" id="new_address_client" class="form-control" placeholder="Adresse"></div>
         <button type="button" class="btn btn-success w-100" onclick="guardarNuevoCliente()"><i class="fas fa-save"></i> Enregistrer</button>
     </div>
 </div></div></div>
@@ -379,22 +380,26 @@ function calcTotale() {
     document.getElementById('id_totale').value = (pn + tx + tp + ac).toFixed(2);
     calcReste();
 }
-function seleccionarCliente(id, code, nom, tel, email) {
+function seleccionarCliente(id, code, nom, tel, email, adresse) {
     document.getElementById('id_assure').value = nom;
     document.getElementById('id_code_client').value = code;
     document.getElementById('id_telefono').value = tel;
     document.getElementById('id_email').value = email;
-    bootstrap.Modal.getInstance(document.getElementById('modalClientes')).hide();
+    if ($.trim($('#id_address').val()) === '') {
+        document.getElementById('id_address').value = adresse;
+    }
+    var mCli = bootstrap.Modal.getInstance(document.getElementById('modalClientes'));
+    if (mCli) mCli.hide();
 }
 function cargarClientes(q) {
     fetch('{% url "get_clientes_json" %}?q=' + encodeURIComponent(q))
         .then(r => r.json()).then(data => {
             let html = '';
             data.forEach(c => {
-                html += '<tr><td>' + c.code + '</td><td>' + c.nom + '</td><td>' + c.tel + '</td><td>' + c.email +
-                    '</td><td><button class="btn btn-sm btn-success" onclick="seleccionarCliente(' + c.id + ',\'' + c.code + '\',\'' + c.nom.replace(/'/g,"\\'") + '\',\'' + c.tel + '\',\'' + c.email + '\')">Sel.</button></td></tr>';
+                html += '<tr><td>' + c.code + '</td><td>' + c.nom + '</td><td>' + c.tel + '</td><td>' + c.email + '</td><td>' + c.address +
+                    '</td><td><button class="btn btn-sm btn-success" onclick="seleccionarCliente(' + c.id + ',\'' + c.code + '\',\'' + c.nom.replace(/'/g,"\\'") + '\',\'' + c.tel + '\',\'' + c.email + '\',\'' + c.address.replace(/'/g,"\\'") + '\')">Sel.</button></td></tr>';
             });
-            document.getElementById('tablaClientesBody').innerHTML = html || '<tr><td colspan="5" class="text-center">Sin resultados</td></tr>';
+            document.getElementById('tablaClientesBody').innerHTML = html || '<tr><td colspan="6" class="text-center">Sin resultados</td></tr>';
         });
 }
 function guardarNuevoCliente() {
@@ -403,11 +408,13 @@ function guardarNuevoCliente() {
     fd.append('nom_client', document.getElementById('new_nom_client').value);
     fd.append('telephone_client', document.getElementById('new_telephone_client').value);
     fd.append('email_client', document.getElementById('new_email_client').value);
+    fd.append('address_client', document.getElementById('new_address_client').value);
     fetch('{% url "crear_cliente_ajax" %}', { method:'POST', body:fd })
         .then(r => r.json()).then(res => {
             if(res.ok) {
-                seleccionarCliente(res.cliente.id, res.cliente.code, res.cliente.nom, res.cliente.tel, res.cliente.email);
-                bootstrap.Modal.getInstance(document.getElementById('modalNuevoCliente')).hide();
+                seleccionarCliente(res.cliente.id, res.cliente.code, res.cliente.nom, res.cliente.tel, res.cliente.email, res.cliente.address);
+                var mNuevo = bootstrap.Modal.getInstance(document.getElementById('modalNuevoCliente'));
+                if (mNuevo) mNuevo.hide();
                 Swal.fire('Creado','Cliente creado correctamente','success');
             } else {
                 Swal.fire('Error',res.error||'Error al crear','error');

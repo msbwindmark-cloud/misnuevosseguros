@@ -6,6 +6,7 @@ class Cliente(models.Model):
     nom_client = models.TextField(verbose_name='Nombre')
     telephone_client = models.CharField(max_length=100, blank=True, default='', verbose_name='Teléfono')
     email_client = models.CharField(max_length=100, blank=True, default='', verbose_name='Email')
+    address_client = models.TextField(blank=True, default='', verbose_name='Adresse')
     creado_el = models.DateTimeField(auto_now_add=True, verbose_name='Creado el')
 
     class Meta:
@@ -23,6 +24,7 @@ class ClienteEliminado(models.Model):
     nom_client = models.TextField(verbose_name='Nombre')
     telephone_client = models.CharField(max_length=100, blank=True, default='', verbose_name='Teléfono')
     email_client = models.CharField(max_length=100, blank=True, default='', verbose_name='Email')
+    address_client = models.TextField(blank=True, default='', verbose_name='Adresse')
     eliminado_el = models.DateTimeField(auto_now_add=True, verbose_name='Eliminado el')
 
     class Meta:
