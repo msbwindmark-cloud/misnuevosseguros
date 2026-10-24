@@ -43,15 +43,21 @@
                             <a href="{% url 'envio_banco_delete' e.pk %}" class="btn btn-danger btn-sm" title="Eliminar"><i class="fas fa-trash"></i></a>
                             <a href="{% url 'envio_banco_pdf' e.pk %}" class="btn btn-outline-danger btn-sm" title="PDF"><i class="fas fa-file-pdf"></i></a>
                             
-                            <!-- Botón Télécharger SIEMPRE visible -->
-                            <a href="{% url 'envio_banco_download' e.pk %}" class="btn btn-success btn-sm" title="Télécharger le document">
-                                <i class="fas fa-download"></i> Télécharger
-                            </a>
-
-                            <!-- Indicador / Contador al lado del botón -->
+                            <!-- Botón condicional único con SweetAlert si no hay documento -->
                             {% if e.nombre_documento_envoie_banque %}
+                                <a href="{% url 'envio_banco_download' e.pk %}" class="btn btn-success btn-sm" title="Télécharger le document">
+                                    <i class="fas fa-download"></i> Télécharger
+                                </a>
                                 <span class="badge bg-success ms-1" title="Documento: {{ e.nombre_documento_envoie_banque }}">1 doc</span>
                             {% else %}
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Sin documento',
+                                    text: 'No hay ningún documento asociado con este virement.',
+                                    confirmButtonText: 'Entendido'
+                                })" title="Sin documento adjunto">
+                                    <i class="fas fa-download"></i> Télécharger
+                                </button>
                                 <span class="badge bg-secondary ms-1" title="Sin documento adjunto">0 doc</span>
                             {% endif %}
                         </td>

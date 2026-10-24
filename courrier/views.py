@@ -1,7 +1,7 @@
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse, JsonResponse, HttpResponseNotFound, FileResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 from django.contrib import messages
@@ -144,6 +144,7 @@ class EnvioCourrierUpdateView(UpdateView):
         ctx = super().get_context_data(**kwargs)
         ctx['expediteurs'] = Expediteur.objects.all()
         ctx['destinataires'] = Destinataire.objects.all()
+        ctx['today'] = date.today()  # <-- Añade esta línea aquí
         return ctx
 
     def form_valid(self, form):
@@ -165,7 +166,56 @@ class EnvioCourrierUpdateView(UpdateView):
             self.object.destinataire_envoie_courrier = des.nom_destinataire
             self.object.addresse_envoie_courrier = des.adresse_destinataire
         self.object.save()
+
+        # 1. Si el usuario marcó la casilla de eliminar documento
+        if self.request.POST.get('eliminar_documento'):
+            import os
+            from django.conf import settings
+            old_fname = self.object.nombre_documento_envoie_courrier
+            if old_fname:
+                old_path = os.path.join(str(settings.MEDIA_ROOT), 'uploads_courrier', old_fname)
+                if os.path.isfile(old_path):
+                    os.remove(old_path)
+            self.object.nombre_documento_envoie_courrier = ''
+            self.object.tipo_documento_envoie_courrier = ''
+            self.object.tamanio_documento_envoie_courrier = None
+            self.object.save()
+
+        # 2. Procesar nuevo archivo adjunto al editar (si se subió uno nuevo)
+        file = self.request.FILES.get('fileupload')
+        if file:
+            ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
+            import os
+            from django.conf import settings
+            upload_dir = os.path.join(str(settings.MEDIA_ROOT), 'uploads_courrier')
+            os.makedirs(upload_dir, exist_ok=True)
+            filepath = os.path.join(upload_dir, file.name)
+            with open(filepath, 'wb+') as dest:
+                for chunk in file.chunks():
+                    dest.write(chunk)
+            self.object.tipo_documento_envoie_courrier = ext
+            self.object.nombre_documento_envoie_courrier = file.name
+            self.object.tamanio_documento_envoie_courrier = file.size
+            self.object.save()
+
         return redirect(self.success_url)
+
+
+@staff_member_required
+def envio_courrier_download(request, pk):
+    from django.conf import settings
+    import os
+    envio = get_object_or_404(EnvioCourrier, pk=pk)
+    fname = getattr(envio, 'nombre_documento_envoie_courrier', '') or ''
+    if not fname:
+        return HttpResponseNotFound('No hay documento asociado con este courrier.')
+    
+    path = os.path.join(str(settings.MEDIA_ROOT), 'uploads_courrier', fname)
+    if not os.path.isfile(path):
+        return HttpResponseNotFound('El fichero no existe en el servidor.')
+    
+    f = open(path, 'rb')
+    return FileResponse(f, as_attachment=True, filename=os.path.basename(fname))
 
 @method_decorator(staff_member_required, name='dispatch')
 class EnvioCourrierDeleteView(DeleteView):

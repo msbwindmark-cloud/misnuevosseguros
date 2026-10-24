@@ -58,7 +58,7 @@
                 <label for="fileupload" class="form-label">Document virement</label>
                 <input type="file" class="form-control" id="fileupload" name="fileupload">
                 
-                <!-- Indicador y enlace del documento actual -->
+                <!-- Indicador, enlace y opción de eliminar el documento actual -->
                 {% if form.instance.nombre_documento_envoie_banque %}
                     <div class="form-text mt-2">
                         <span class="badge bg-success"><i class="fas fa-file-alt"></i> Archivo actual:</span>
@@ -66,6 +66,14 @@
                             {{ form.instance.nombre_documento_envoie_banque }}
                         </a>
                         <span class="text-muted ms-2">(Si seleccionas un archivo nuevo, este se reemplazará)</span>
+                        
+                        <!-- Checkbox para eliminar el documento -->
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" name="eliminar_documento" id="eliminar_documento">
+                            <label class="form-check-label text-danger small fw-bold" for="eliminar_documento">
+                                <i class="fas fa-trash-alt"></i> Eliminar este documento actual
+                            </label>
+                        </div>
                     </div>
                 {% else %}
                     <div class="form-text text-muted mt-1">

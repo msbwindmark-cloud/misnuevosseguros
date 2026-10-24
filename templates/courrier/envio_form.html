@@ -35,7 +35,9 @@
                     <select class="form-select" name="expediteur" id="expediteur" required>
                         <option value="">Seleccioner un Expediteur</option>
                         {% for e in expediteurs %}
-                        <option value="{{ e.pk }}">{{ e.nom_expediteur }}</option>
+                        <option value="{{ e.pk }}" {% if form.instance.expediteur_envoie_courrier == e.nom_expediteur %}selected{% endif %}>
+                            {{ e.nom_expediteur }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -52,7 +54,9 @@
                     <select class="form-select" name="destinataire" id="destinataire" required>
                         <option value="">Seleccioner un Destinataire</option>
                         {% for d in destinataires %}
-                        <option value="{{ d.pk }}">{{ d.nom_destinataire }}</option>
+                        <option value="{{ d.pk }}" {% if form.instance.destinataire_envoie_courrier == d.nom_destinataire %}selected{% endif %}>
+                            {{ d.nom_destinataire }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -66,6 +70,28 @@
             <div class="mb-3">
                 <label for="fileupload" class="form-label">Document envoie courrier:</label>
                 <input type="file" class="form-control" id="fileupload" name="fileupload">
+
+                <!-- Enlace y visor del documento actual al editar -->
+                {% if form.instance.nombre_documento_envoie_courrier %}
+                    <div class="form-text mt-2">
+                        <span class="badge bg-success"><i class="fas fa-file-alt"></i> Archivo actual:</span>
+                        <a href="{% url 'envio_courrier_download' form.instance.pk %}" target="_blank" class="text-decoration-none fw-bold ms-1">
+                            {{ form.instance.nombre_documento_envoie_courrier }}
+                        </a>
+                        <span class="text-muted ms-2">(Si seleccionas un archivo nuevo, este se reemplazará)</span>
+                        <!-- Checkbox para eliminar el documento -->
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" name="eliminar_documento" id="eliminar_documento">
+                            <label class="form-check-label text-danger small fw-bold" for="eliminar_documento">
+                                <i class="fas fa-trash-alt"></i> Eliminar este documento actual
+                            </label>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="form-text text-muted mt-1">
+                        <i class="fas fa-info-circle"></i> No hay ningún documento adjunto actualmente.
+                    </div>
+                {% endif %}
             </div>
         </div>
         <div class="card-footer d-flex gap-2 flex-wrap">

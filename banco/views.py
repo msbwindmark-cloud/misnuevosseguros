@@ -126,10 +126,10 @@ class EnvioBancoCreateView(View):
             ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
             import os
             from django.conf import settings
-            upload_dir = settings.MEDIA_ROOT / 'uploads_banco'
-            upload_dir.mkdir(parents=True, exist_ok=True)
-            filepath = upload_dir / file.name
-            with open(str(filepath), 'wb+') as dest:
+            upload_dir = os.path.join(str(settings.MEDIA_ROOT), 'uploads_banco')
+            os.makedirs(upload_dir, exist_ok=True)
+            filepath = os.path.join(upload_dir, file.name)
+            with open(filepath, 'wb+') as dest:
                 for chunk in file.chunks():
                     dest.write(chunk)
             envio.tipo_documento_envoie_banque = ext
@@ -139,6 +139,51 @@ class EnvioBancoCreateView(View):
 
         messages.success(request, f'Virement enregistré correctement')
         return redirect(self.success_url)
+
+
+@method_decorator(staff_member_required, name='dispatch')
+class EnvioBancoUpdateView(UpdateView):
+    model = EnvioBanco
+    form_class = EnvioBancoForm
+    template_name = 'banco/envio_form.html'
+    success_url = reverse_lazy('envio_banco_list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        envio = self.object
+
+        # 1. Si el usuario marcó la casilla de eliminar documento
+        if self.request.POST.get('eliminar_documento'):
+            import os
+            from django.conf import settings
+            old_fname = envio.nombre_documento_envoie_banque
+            if old_fname:
+                old_path = os.path.join(str(settings.MEDIA_ROOT), 'uploads_banco', old_fname)
+                if os.path.isfile(old_path):
+                    os.remove(old_path)
+            envio.nombre_documento_envoie_banque = ''
+            envio.tipo_documento_envoie_banque = ''
+            envio.tamanio_documento_envoie_banque = None
+            envio.save()
+
+        # 2. Procesar nuevo archivo adjunto al editar
+        file = self.request.FILES.get('fileupload')
+        if file:
+            ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
+            import os
+            from django.conf import settings
+            upload_dir = os.path.join(str(settings.MEDIA_ROOT), 'uploads_banco')
+            os.makedirs(upload_dir, exist_ok=True)
+            filepath = os.path.join(upload_dir, file.name)
+            with open(filepath, 'wb+') as dest:
+                for chunk in file.chunks():
+                    dest.write(chunk)
+            envio.tipo_documento_envoie_banque = ext
+            envio.nombre_documento_envoie_banque = file.name
+            envio.tamanio_documento_envoie_banque = file.size
+            envio.save()
+
+        return response
 
 
 @method_decorator(staff_member_required, name='dispatch')

@@ -6,6 +6,10 @@ urlpatterns = [
     path('nuevo/', views.EnvioCourrierCreateView.as_view(), name='courrier_create'),
     path('<int:pk>/editar/', views.EnvioCourrierUpdateView.as_view(), name='courrier_update'),
     path('<int:pk>/eliminar/', views.EnvioCourrierDeleteView.as_view(), name='courrier_delete'),
+    
+    # --- Añade esta línea para la descarga ---
+    path('<int:pk>/download/', views.envio_courrier_download, name='envio_courrier_download'),
+    
     path('<int:pk>/pdf/', views.envio_courrier_pdf, name='courrier_pdf'),
     path('pdf/', views.envio_courrier_last_pdf, name='courrier_last_pdf'),
     path('pdf-lista/', views.envio_courrier_list_pdf, name='courrier_list_pdf'),
