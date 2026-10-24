@@ -464,39 +464,34 @@ def poliza_datatables_data(request):
     draw = int(request.GET.get('draw', 1))
     start = int(request.GET.get('start', 0))
     length = int(request.GET.get('length', 50))
-    search_value = request.GET.get('search[value]', '')
-    order_col = int(request.GET.get('order[0][column]', 1))
-    order_dir = request.GET.get('order[0][dir]', 'desc')
+    search_value = request.GET.get('search[value]', '').strip()
+    q = request.GET.get('q', '').strip()
 
     col_map = {1: 'recu', 2: 'fecha_hoy', 3: 'letype', 4: 'police',
                5: 'matricule', 6: 'assure', 7: 'totale', 8: 'reste'}
+    order_col = int(request.GET.get('order[0][column]', 1))
+    order_dir = request.GET.get('order[0][dir]', 'desc')
     order_field = col_map.get(order_col, 'recu')
     if order_dir == 'desc':
         order_field = '-' + order_field
 
     qs = Poliza.objects.all()
-    if search_value:
+
+    # Combinar el texto introducido en cualquiera de los dos buscadores
+    query_text = search_value or q
+    if query_text:
         from django.db.models import Q
         qs = qs.filter(
-            Q(police__icontains=search_value) |
-            Q(assure__icontains=search_value) |
-            Q(matricule__icontains=search_value) |
-            Q(recu__icontains=search_value)
+            Q(police__icontains=query_text) |
+            Q(assure__icontains=query_text) |
+            Q(matricule__icontains=query_text) |
+            Q(recu__icontains=query_text)
         )
 
     records_total = Poliza.objects.count()
 
-    q = request.GET.get('q')
     fecha_desde = request.GET.get('fecha_desde')
     fecha_hasta = request.GET.get('fecha_hasta')
-    if q:
-        from django.db.models import Q
-        qs = qs.filter(
-            Q(police__icontains=q) |
-            Q(assure__icontains=q) |
-            Q(matricule__icontains=q) |
-            Q(recu__icontains=q)
-        )
     if fecha_desde:
         qs = qs.filter(fecha_hoy__gte=fecha_desde)
     if fecha_hasta:

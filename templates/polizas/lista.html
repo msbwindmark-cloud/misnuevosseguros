@@ -304,9 +304,10 @@ Proyecto SIS{% endblock %} {% block content %}
       url: "{% url 'poliza_datatables_data' %}",
       dataSrc: "data",
       data: function (d) {
-        d.q = "{{ q }}";
-        d.fecha_desde = "{{ fecha_desde }}";
-        d.fecha_hasta = "{{ fecha_hasta }}";
+        // Capturamos los valores en tiempo real de los inputs del formulario
+        d.q = $('input[name="q"]').val();
+        d.fecha_desde = $('input[name="fecha_desde"]').val();
+        d.fecha_hasta = $('input[name="fecha_hasta"]').val();
         d.con_docs = '{{ filtrando_docs|yesno:"1," }}';
       },
     },
@@ -367,6 +368,21 @@ Proyecto SIS{% endblock %} {% block content %}
         },
       },
     ],
+  });
+
+  // --- FILTRADO EN TIEMPO REAL (AS YOU TYPE) ---
+  $('input[name="q"]').on('keyup change', function() {
+      tablaPolizas.ajax.reload();
+  });
+
+  $('input[name="fecha_desde"], input[name="fecha_hasta"]').on('change', function() {
+      tablaPolizas.ajax.reload();
+  });
+
+  // Evitamos que el formulario recargue la página al pulsar Enter o Buscar
+  $('form.row.mb-3.g-2.align-items-end').on('submit', function(e) {
+      e.preventDefault();
+      tablaPolizas.ajax.reload();
   });
 
   function actualizarSeleccion() {
