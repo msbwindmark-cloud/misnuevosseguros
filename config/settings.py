@@ -64,7 +64,7 @@ MIDDLEWARE = [
 ]
 
 if DEBUG:
-    MIDDLEWARE.append('livereload.middleware.LiveReloadScript')
+    MIDDLEWARE.append('core.middleware.LocalOnlyLiveReload')
 
 ROOT_URLCONF = 'config.urls'
 

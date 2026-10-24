@@ -1,6 +1,7 @@
 from django.shortcuts import redirect
 from django.conf import settings
 from django.urls import resolve, Resolver404
+from django.utils.deprecation import MiddlewareMixin
 
 
 class SecurityMiddleware:
@@ -32,3 +33,20 @@ class SecurityMiddleware:
         response['Pragma'] = 'no-cache'
         response['Expires'] = '0'
         return response
+
+
+class LocalOnlyLiveReload(MiddlewareMixin):
+    """Inyecta el script de live reload solo cuando se navega desde localhost.
+
+    En el servidor de despliegue (p. ej. PythonAnywhere) no se añade el script,
+    evitando errores de conexión a 127.0.0.1:35729 en el navegador del cliente.
+    """
+
+    LOCAL_HOSTS = {'localhost', '127.0.0.1', '::1'}
+
+    def process_response(self, request, response):
+        host = (request.get_host() or '').split(':')[0].lower()
+        if host not in self.LOCAL_HOSTS:
+            return response
+        from livereload.middleware import LiveReloadScript
+        return LiveReloadScript(lambda req: response).process_response(request, response)

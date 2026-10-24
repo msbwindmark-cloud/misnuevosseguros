@@ -25,6 +25,7 @@ def populate_all_ciudades(apps, schema_editor):
         ('Khouribga', 'Khouribga', 'Morocco', 2, 'Marruecos', 248),
         ('Errachidia', 'Errachidia', 'Morocco', 2, 'Marruecos', 249),
         ('Ifrane', 'Ifrane', 'Morocco', 2, 'Marruecos', 250),
+        ('Bouznika', 'Bouznika', 'Morocco', 2, 'Marruecos', 251),
 
         # ── España ─────────────────────────────────────────────
         ('Sevilla', 'Seville', 'Spain', 3, 'España', 10),
