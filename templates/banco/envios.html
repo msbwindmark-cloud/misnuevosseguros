@@ -19,7 +19,15 @@
         <div class="table-responsive">
             <table class="table table-hover datatable">
                 <thead>
-                    <tr><th>ID</th><th>Nombre</th><th>Banco</th><th>Cuenta</th><th>Fecha</th><th>Monto</th><th>Acciones</th></tr>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Banco</th>
+                        <th>Cuenta</th>
+                        <th>Fecha</th>
+                        <th>Monto</th>
+                        <th>Acciones</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {% for e in envios %}
@@ -31,9 +39,21 @@
                         <td>{{ e.date_envoie|date:"d/m/Y" }}</td>
                         <td>{{ e.montant_envoie }} MAD</td>
                         <td>
-                            <a href="{% url 'envio_banco_update' e.pk %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Editar</a>
-                            <a href="{% url 'envio_banco_delete' e.pk %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Eliminar</a>
-                            <a href="{% url 'envio_banco_pdf' e.pk %}" class="btn btn-outline-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a>
+                            <a href="{% url 'envio_banco_update' e.pk %}" class="btn btn-warning btn-sm" title="Editar"><i class="fas fa-edit"></i></a>
+                            <a href="{% url 'envio_banco_delete' e.pk %}" class="btn btn-danger btn-sm" title="Eliminar"><i class="fas fa-trash"></i></a>
+                            <a href="{% url 'envio_banco_pdf' e.pk %}" class="btn btn-outline-danger btn-sm" title="PDF"><i class="fas fa-file-pdf"></i></a>
+                            
+                            <!-- Botón Télécharger SIEMPRE visible -->
+                            <a href="{% url 'envio_banco_download' e.pk %}" class="btn btn-success btn-sm" title="Télécharger le document">
+                                <i class="fas fa-download"></i> Télécharger
+                            </a>
+
+                            <!-- Indicador / Contador al lado del botón -->
+                            {% if e.nombre_documento_envoie_banque %}
+                                <span class="badge bg-success ms-1" title="Documento: {{ e.nombre_documento_envoie_banque }}">1 doc</span>
+                            {% else %}
+                                <span class="badge bg-secondary ms-1" title="Sin documento adjunto">0 doc</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

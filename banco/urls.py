@@ -15,6 +15,7 @@ urlpatterns = [
     path('envios/<int:pk>/editar/', views.EnvioBancoUpdateView.as_view(), name='envio_banco_update'),
     path('envios/<int:pk>/eliminar/', views.EnvioBancoDeleteView.as_view(), name='envio_banco_delete'),
     path('envios/<int:pk>/pdf/', views.envio_banco_pdf, name='envio_banco_pdf'),
+    path('envios/<int:pk>/download/', views.envio_banco_download, name='envio_banco_download'),
     path('envios/pdf/ultimo/', views.envio_banco_last_pdf, name='envio_banco_last_pdf'),
     path('envios/pdf/', views.envio_banco_list_pdf, name='envio_banco_list_pdf'),
     path('envios/excel/', views.export_envios_banco_excel, name='export_envios_banco_excel'),

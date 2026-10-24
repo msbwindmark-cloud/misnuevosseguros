@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.contrib.admin.views.decorators import staff_member_required
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseNotFound, JsonResponse, FileResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
@@ -147,6 +147,26 @@ class EnvioBancoUpdateView(UpdateView):
     form_class = EnvioBancoForm
     template_name = 'banco/envio_form.html'
     success_url = reverse_lazy('envio_banco_list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        envio = self.object
+        file = self.request.FILES.get('fileupload')
+        if file:
+            ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
+            import os
+            from django.conf import settings
+            upload_dir = settings.MEDIA_ROOT / 'uploads_banco'
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            filepath = upload_dir / file.name
+            with open(str(filepath), 'wb+') as dest:
+                for chunk in file.chunks():
+                    dest.write(chunk)
+            envio.tipo_documento_envoie_banque = ext
+            envio.nombre_documento_envoie_banque = file.name
+            envio.tamanio_documento_envoie_banque = file.size
+            envio.save()
+        return response
 
 
 @method_decorator(staff_member_required, name='dispatch')
@@ -326,6 +346,25 @@ def envio_banco_list_pdf(request):
     return HttpResponse(buffer, content_type='application/pdf', headers={
         'Content-Disposition': 'attachment; filename="envios_bancarios.pdf"'
     })
+
+
+@staff_member_required
+def envio_banco_download(request, pk):
+    from django.conf import settings
+    import os
+    envio = get_object_or_404(EnvioBanco, pk=pk)
+    fname = getattr(envio, 'nombre_documento_envoie_banque', '') or ''
+    if not fname:
+        return HttpResponseNotFound('No hay documento asociado con este virement.')
+    
+    path = os.path.join(str(settings.MEDIA_ROOT), 'uploads_banco', fname)
+    
+    if not os.path.isfile(path):
+        return HttpResponseNotFound('El fichero no existe en el servidor.')
+    
+    # Abrimos el fichero sin el 'with' para que FileResponse lo lea y cierre correctamente al terminar
+    f = open(path, 'rb')
+    return FileResponse(f, as_attachment=True, filename=os.path.basename(fname))
 
 
 @staff_member_required
