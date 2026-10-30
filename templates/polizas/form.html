@@ -302,7 +302,7 @@
         {% for g in garantias %}
             <div class="col-md-4 mb-4">
                 <div class="form-check ps-3 garantia-item">
-                    <input class="form-check-input garantia-check" type="checkbox" id="garantie_{{ g.id }}" value="{{ g.id }}" data-nom="{{ g.nom_garantie }}">
+                    <input class="form-check-input garantia-check" type="checkbox" id="garantie_{{ g.id }}" value="{{ g.id }}" data-nom="{{ g.nom_garantie }}"{% if not editing and g.nom_garantie == 'responsabilite_civile' %} checked{% endif %}>
                     <label class="form-check-label" for="garantie_{{ g.id }}">{{ g.nom_garantie }}</label>
                     {% if g.id in garantias_opciones %}
                     <div id="options_garantie_{{ g.id }}" class="mt-2" style="display:none">
@@ -359,6 +359,7 @@ const tiposAttestationOptions = `{% for t in tipos_attestation %}<option value="
 let filaDocIndex = 1;
 let garantiasSeleccionadas = [];
 const EDITING_GARANTIAS = {% if editing %}{{ garantias_data_json|safe }}{% else %}[]{% endif %};
+const IS_EDITING = {% if editing %}true{% else %}false{% endif %};
 
 function autoFillDesignation() {
     const marque = document.getElementById('id_marque').value.trim();
@@ -699,6 +700,11 @@ if (EDITING_GARANTIAS.length) {
         }
     }
     initGarantias();
+} else if (!IS_EDITING) {
+    // Responsabilité Civile cochée par défaut sur une nouvelle póliza
+    const rcCheck = document.querySelector('.garantia-check[data-nom="responsabilite_civile"]');
+    if (rcCheck) rcCheck.checked = true;
+    confirmarGarantias();
 }
 </script>
 {% endblock %}
