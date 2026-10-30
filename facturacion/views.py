@@ -183,9 +183,10 @@ def _quittance_pdf(poliza, doc_type="FACTURE"):
         y -= 4*mm
 
     y -= 8*mm
+    doc_title = f"{doc_type}  N\u00ba {poliza.recu}"
     c.setFont('Helvetica-Bold', 14)
-    c.drawCentredString(A4[0]/2, y, doc_type)
-    tw = c.stringWidth(doc_type, 'Helvetica-Bold', 14)
+    c.drawCentredString(A4[0]/2, y, doc_title)
+    tw = c.stringWidth(doc_title, 'Helvetica-Bold', 14)
     c.line(A4[0]/2 - tw/2, y - 2, A4[0]/2 + tw/2, y - 2)
     y -= 18*mm
 
