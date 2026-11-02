@@ -348,12 +348,6 @@ def _client_pdf(cliente, polizas, prefix, title):
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), HexColor('#0D6EFD')),
         ('TEXTCOLOR', (0, 0), (-1, 0), white),
-        ('BACKGROUND', (0, -6), (-1, -6), bg_grey),
-        ('BACKGROUND', (0, -5), (-1, -5), bg_grey),
-        ('BACKGROUND', (0, -4), (-1, -4), bg_grey),
-        ('BACKGROUND', (0, -3), (-1, -3), bg_grey),
-        ('BACKGROUND', (0, -2), (-1, -2), bg_grey),
-        ('BACKGROUND', (0, -1), (-1, -1), HexColor('#F0F0F0')),
         ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('TOPPADDING', (0, 0), (-1, -1), 4),
