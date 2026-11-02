@@ -89,12 +89,25 @@ def export_polizas_excel(request):
         cell.font = header_font
         cell.alignment = Alignment(horizontal='center')
     polizas = Poliza.objects.all().order_by('-recu')
+    q = request.GET.get('q')
+    if q:
+        from django.db.models import Q
+        polizas = polizas.filter(
+            Q(police__icontains=q) |
+            Q(assure__icontains=q) |
+            Q(matricule__icontains=q) |
+            Q(recu__icontains=q)
+        )
     fecha_desde = request.GET.get('fecha_desde')
     fecha_hasta = request.GET.get('fecha_hasta')
     if fecha_desde:
         polizas = polizas.filter(fecha_hoy__gte=fecha_desde)
     if fecha_hasta:
         polizas = polizas.filter(fecha_hoy__lte=fecha_hasta)
+    if request.GET.get('con_docs') == '1':
+        from documentos.models import DocumentoUsuario
+        doc_ids = DocumentoUsuario.objects.values_list('id_usuario', flat=True).distinct()
+        polizas = polizas.filter(recu__in=doc_ids)
     for row, p in enumerate(polizas, 2):
         ws.cell(row=row, column=1, value=p.recu)
         ws.cell(row=row, column=2, value=p.fecha_hoy.strftime('%d/%m/%Y') if p.fecha_hoy else '')

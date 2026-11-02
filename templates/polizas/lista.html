@@ -109,7 +109,9 @@ Proyecto SIS{% endblock %} {% block content %}
       {% endif %}
       <div class="col-auto">
         <a
-          href="{% url 'export_polizas_excel' %}?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}"
+          id="excelFiltroLink"
+          data-url="{% url 'export_polizas_excel' %}"
+          href="{% url 'export_polizas_excel' %}?q={{ q|urlencode }}&fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}"
           class="btn btn-info"
           ><i class="fas fa-file-excel"></i> Excel (filtre)</a
         >
@@ -383,6 +385,22 @@ Proyecto SIS{% endblock %} {% block content %}
   $('form.row.mb-3.g-2.align-items-end').on('submit', function(e) {
       e.preventDefault();
       tablaPolizas.ajax.reload();
+  });
+
+  // Exportar a Excel respetando los filtros actuales (fechas + búsqueda + documentos).
+  // La tabla filtra por AJAX sin recargar, por eso la URL se construye al pulsar el botón.
+  document.getElementById('excelFiltroLink')?.addEventListener('click', function(e) {
+      e.preventDefault();
+      var params = new URLSearchParams();
+      var q = $('input[name="q"]').val();
+      var fechaDesde = $('input[name="fecha_desde"]').val();
+      var fechaHasta = $('input[name="fecha_hasta"]').val();
+      if (q) params.set('q', q);
+      if (fechaDesde) params.set('fecha_desde', fechaDesde);
+      if (fechaHasta) params.set('fecha_hasta', fechaHasta);
+      if ('{{ filtrando_docs|yesno:"1," }}' === '1') params.set('con_docs', '1');
+      var qs = params.toString();
+      window.location.href = this.dataset.url + (qs ? '?' + qs : '');
   });
 
   function actualizarSeleccion() {
