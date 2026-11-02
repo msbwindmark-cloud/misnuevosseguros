@@ -51,8 +51,8 @@
                     {% for p in polizas %}
                     <tr>
                         <td><input type="checkbox" class="form-check-input check-facture" value="{{ p.recu }}"></td>
-                        <td>{{ p.police }}</td>
-                        <td>{{ p.du|date:"d/m/Y" }} - {{ p.au|date:"d/m/Y" }}</td>
+                        <td data-order="{{ p.recu|stringformat:'010d' }}">{{ p.police }}</td>
+                        <td data-order="{{ p.au|date:'Y-m-d' }}">{{ p.du|date:"d/m/Y" }} - {{ p.au|date:"d/m/Y" }}</td>
                         <td>{{ p.designation }}</td>
                         <td>{{ p.prime_net }}</td>
                         <td>{{ p.taxes }}</td>
@@ -92,7 +92,12 @@
         language: { url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
         lengthMenu: [5, 10, 25, 50, 100],
         pageLength: 5,
-        order: [[1, 'desc']],
+        searching: true,
+        paging: true,
+        info: true,
+        // Orden inicial por Période (fecha fin, data-order = au) de más reciente a más antiguo.
+        // Al pulsar "N° Police" se ordena por número de recibo (data-order = recu).
+        order: [[2, 'desc']],
         columnDefs: [{ orderable: false, targets: 0 }],
         drawCallback: function () {
             var api = this.api();
@@ -146,7 +151,7 @@
     $('#btnExportExcel').on('click', function () {
         var d = new Date();
         var n = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
-        var le_client = '{{ cliente_nom }}';
+        var le_client = '{{ cliente_nom|escapejs }}';
         var titulo = 'F_' + le_client + '_' + n;
         var tabla = document.getElementById('tablaFacturas');
         var clon = tabla.cloneNode(true);
@@ -172,7 +177,7 @@
     $('#btnExporterFusionne').on('click', function () {
         var d = new Date();
         var n = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
-        var le_client = '{{ cliente_nom }}';
+        var le_client = '{{ cliente_nom|escapejs }}';
         var titulo = 'F_' + le_client + '_' + n;
         var tabla = document.getElementById('tablaFacturas');
         var clon = tabla.cloneNode(true);
@@ -245,7 +250,7 @@
         }
         var d = new Date();
         var n = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
-        var le_client = '{{ cliente_nom }}';
+        var le_client = '{{ cliente_nom|escapejs }}';
         var titulo = 'F_' + le_client + '_' + n;
 
         var headers = ['N&deg; Police', 'P&eacute;riode', 'D&eacute;signation', 'Prime Nette', 'Taxes', 'T.P', 'Accessoires', 'Total TTC'];
@@ -254,8 +259,8 @@
 
         var html = '';
         html += '<tr><td colspan="' + ncols + '" style="text-align:left;">Rabat, le : {{ fecha_hoy }}</td></tr>';
-        html += '<tr><td colspan="' + ncols + '" style="text-align:left; font-weight:bold;">' + escHtmlFac('{{ cliente_nom }}') + '</td></tr>';
-        html += '<tr><td colspan="' + ncols + '" style="text-align:left;">' + escHtmlFac('{{ cliente_adresse }}') + '</td></tr>';
+        html += '<tr><td colspan="' + ncols + '" style="text-align:left; font-weight:bold;">' + escHtmlFac('{{ cliente_nom|escapejs }}') + '</td></tr>';
+        html += '<tr><td colspan="' + ncols + '" style="text-align:left;">' + escHtmlFac('{{ cliente_adresse|escapejs }}') + '</td></tr>';
         html += '<tr><td colspan="' + ncols + '" style="text-align:left; font-weight:bold; color:#dc3545; text-decoration:underline;">' + escHtmlFac(document.getElementById('el_cliente').innerText.trim()) + '</td></tr>';
         html += '<tr><td colspan="' + ncols + '"></td></tr>';
         html += '<tr>' + headers.map(function (h) { return '<th style="border:1px solid black; width:200px;">' + h + '</th>'; }).join('') + '</tr>';
