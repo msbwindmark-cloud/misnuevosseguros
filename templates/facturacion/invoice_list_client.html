@@ -95,9 +95,9 @@
         searching: true,
         paging: true,
         info: true,
-        // Orden inicial por Période (fecha fin, data-order = au) de más reciente a más antiguo.
-        // Al pulsar "N° Police" se ordena por número de recibo (data-order = recu).
-        order: [[2, 'desc']],
+        // Orden inicial por número de recibo (recu, data-order de N° Police): más nuevo primero.
+        // Al pulsar "Période" se ordena por fecha fin (data-order = au).
+        order: [[1, 'desc']],
         columnDefs: [{ orderable: false, targets: 0 }],
         drawCallback: function () {
             var api = this.api();
