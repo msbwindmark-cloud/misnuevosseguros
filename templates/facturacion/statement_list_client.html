@@ -255,10 +255,19 @@
         var ncols = headers.length;
 
         var html = '';
-        html += '<tr><td colspan="' + ncols + '" style="text-align:left;">Rabat, le : {{ fecha_hoy }}</td></tr>';
-        html += '<tr><td colspan="' + ncols + '" style="text-align:left; font-weight:bold;">' + escHtmlRel('{{ cliente_nom|escapejs }}') + '</td></tr>';
-        html += '<tr><td colspan="' + ncols + '" style="text-align:left;">' + escHtmlRel('{{ cliente_adresse|escapejs }}') + '</td></tr>';
-        html += '<tr><td colspan="' + ncols + '" style="text-align:left; font-weight:bold; color:#dc3545; text-decoration:underline;">' + escHtmlRel(document.getElementById('el_cliente').innerText.trim()) + '</td></tr>';
+        // 13 filas vacías ocultas para dejar espacio al logo/cabecera al imprimir (igual que PHP)
+        for (var _h = 0; _h < 13; _h++) {
+            html += '<tr hidden="">';
+            for (var _c = 0; _c < ncols; _c++) {
+                html += '<td></td>';
+            }
+            html += '</tr>';
+        }
+        // Títulos desplazados a la derecha (2 celdas vacías + colspan) para dejar espacio al logo
+        html += '<tr><td></td><td></td><td colspan="' + (ncols - 2) + '" style="text-align:left;">Rabat, le : {{ fecha_hoy }}</td></tr>';
+        html += '<tr><td></td><td></td><td colspan="' + (ncols - 2) + '" style="text-align:left; font-weight:bold;">' + escHtmlRel('{{ cliente_nom|escapejs }}') + '</td></tr>';
+        html += '<tr><td></td><td></td><td colspan="' + (ncols - 2) + '" style="text-align:left;">' + escHtmlRel('{{ cliente_adresse|escapejs }}') + '</td></tr>';
+        html += '<tr><td></td><td></td><td colspan="' + (ncols - 2) + '" style="text-align:left; font-weight:bold; color:#dc3545; text-decoration:underline;">' + escHtmlRel(document.getElementById('el_cliente').innerText.trim()) + '</td></tr>';
         html += '<tr><td colspan="' + ncols + '"></td></tr>';
         html += '<tr>' + headers.map(function (h) { return '<th style="border:1px solid black; width:200px;">' + h + '</th>'; }).join('') + '</tr>';
 
