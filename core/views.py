@@ -88,7 +88,7 @@ def export_polizas_excel(request):
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = Alignment(horizontal='center')
-    polizas = Poliza.objects.all().order_by('-recu')
+    polizas = Poliza.objects.all().order_by('recu')
     q = request.GET.get('q')
     if q:
         from django.db.models import Q
