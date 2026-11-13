@@ -22,10 +22,13 @@
                     <tr>
                         <th>ID</th>
                         <th>Nombre</th>
+                        <th>Beneficiario</th>
                         <th>Banco</th>
                         <th>Cuenta</th>
                         <th>Fecha</th>
                         <th>Monto</th>
+                        <th>Motivo</th>
+                        <th>Creado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -34,10 +37,13 @@
                     <tr>
                         <td>{{ e.id }}</td>
                         <td>{{ e.nom_envoie }}</td>
+                        <td>{{ e.benificiario.nom_benificiaire|default:"—" }}</td>
                         <td>{{ e.banque_envoie }}</td>
                         <td>{{ e.compte_envoie }}</td>
                         <td>{{ e.date_envoie|date:"d/m/Y" }}</td>
                         <td>{{ e.montant_envoie }} MAD</td>
+                        <td class="text-truncate" style="max-width: 220px;" title="{{ e.motif_envoie }}">{{ e.motif_envoie|default:"—" }}</td>
+                        <td>{{ e.creado_el|date:"d/m/Y H:i" }}</td>
                         <td>
                             <a href="{% url 'envio_banco_update' e.pk %}" class="btn btn-warning btn-sm" title="Editar"><i class="fas fa-edit"></i></a>
                             <a href="{% url 'envio_banco_delete' e.pk %}" class="btn btn-danger btn-sm" title="Eliminar"><i class="fas fa-trash"></i></a>
@@ -63,7 +69,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center">No hay envíos</td></tr>
+                    <tr><td colspan="10" class="text-center">No hay envíos</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

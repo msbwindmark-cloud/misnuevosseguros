@@ -101,6 +101,9 @@ class EnvioBancoCreateView(View):
         files = request.FILES
         benificiario_id = data.get('benificiario')
         banco_id = data.get('banco')
+        nom_envoie = (data.get('nom_envoie') or '').strip()
+        banque_envoie = (data.get('banque_envoie') or '').strip()
+        compte_envoie = (data.get('compte_envoie') or '').strip()
         try:
             ben = Benificiario.objects.get(pk=int(benificiario_id)) if benificiario_id else None
         except (Benificiario.DoesNotExist, ValueError, TypeError):
@@ -111,9 +114,9 @@ class EnvioBancoCreateView(View):
             ban = None
 
         envio = EnvioBanco.objects.create(
-            nom_envoie=ben.nom_benificiaire if ben else '',
-            banque_envoie=ben.banque_benificiaire if ben else '',
-            compte_envoie=ben.compte_benificiaire if ben else '',
+            nom_envoie=nom_envoie or (ben.nom_benificiaire if ben else ''),
+            banque_envoie=banque_envoie or (ben.banque_benificiaire if ben else ''),
+            compte_envoie=compte_envoie or (ben.compte_benificiaire if ben else ''),
             date_envoie=data.get('date_envoie') or None,
             montant_envoie=data.get('montant_envoie', 0),
             motif_envoie=data.get('motif_envoie', ''),
@@ -183,34 +186,6 @@ class EnvioBancoUpdateView(UpdateView):
             envio.tamanio_documento_envoie_banque = file.size
             envio.save()
 
-        return response
-
-
-@method_decorator(staff_member_required, name='dispatch')
-class EnvioBancoUpdateView(UpdateView):
-    model = EnvioBanco
-    form_class = EnvioBancoForm
-    template_name = 'banco/envio_form.html'
-    success_url = reverse_lazy('envio_banco_list')
-
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        envio = self.object
-        file = self.request.FILES.get('fileupload')
-        if file:
-            ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
-            import os
-            from django.conf import settings
-            upload_dir = settings.MEDIA_ROOT / 'uploads_banco'
-            upload_dir.mkdir(parents=True, exist_ok=True)
-            filepath = upload_dir / file.name
-            with open(str(filepath), 'wb+') as dest:
-                for chunk in file.chunks():
-                    dest.write(chunk)
-            envio.tipo_documento_envoie_banque = ext
-            envio.nombre_documento_envoie_banque = file.name
-            envio.tamanio_documento_envoie_banque = file.size
-            envio.save()
         return response
 
 
@@ -307,7 +282,12 @@ def envio_banco_pdf(request, pk):
     c.rect(x + w_nom + w_banque, y_data, w_compte, row_h, fill=0, stroke=1)
     c.rect(x + w_nom + w_banque + w_compte, y_data, w_montant, row_h, fill=0, stroke=1)
 
-    c.drawString(x + 2 * mm, y_data + 2 * mm, str(envio.nom_envoie))
+    nombre_beneficiario = (
+        envio.benificiario.nom_benificiaire
+        if envio.benificiario_id
+        else envio.nom_envoie
+    )
+    c.drawString(x + 2 * mm, y_data + 2 * mm, str(nombre_beneficiario))
     c.drawString(x + w_nom + 2 * mm, y_data + 2 * mm, str(envio.banque_envoie))
     c.drawCentredString(x + w_nom + w_banque + w_compte / 2, y_data + 2 * mm, str(envio.compte_envoie))
     c.drawCentredString(x + w_nom + w_banque + w_compte + w_montant / 2, y_data + 2 * mm, f'{montant:.2f}')
