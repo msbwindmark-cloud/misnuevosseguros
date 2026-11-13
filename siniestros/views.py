@@ -58,6 +58,10 @@ class SinistroCreateView(View):
         val = {k: '' for k in ['code_sinistre','ref_sinistre','cod_sig_correcto','completo','date_operation','date_sinistre','date_reception','police','assure','categorie_assurance','reference_assurance','benificiaire','reference_assistance','nom_formule','nom_expert','reference_reglement','document_de_base','montant','reference_payement','date_payement','id_recu']}
         val['code_sinistre'] = sugerido
         val['cod_sig_correcto'] = '0'
+        hoy = datetime.now().strftime('%Y-%m-%d')
+        # Por defecto, al crear: fecha de operación y de recepción = hoy
+        val['date_operation'] = hoy
+        val['date_reception'] = hoy
         return render(request, self.template_name, {
             'val': val,
             'sugerido': sugerido,
@@ -66,7 +70,7 @@ class SinistroCreateView(View):
             'referencias_reg': ReferenceReglement.objects.all(),
             'documentos_base': DocumentDeBase.objects.all(),
             'tipos_doc': TipoDocumento.objects.all(),
-            'hoy': datetime.now().strftime('%Y-%m-%d'),
+            'hoy': hoy,
         })
 
     def post(self, request):
